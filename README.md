@@ -61,6 +61,7 @@ Optional:
 - `pnpm typecheck`
 - `pnpm build`
 - Mock peer-core smoke test: booted server, hit `/health`, posted a case packet, and verified a completed job with summary + grounded answer
+- Re-runnable smoke script: `powershell -ExecutionPolicy Bypass -File .\scripts\mock-smoke.ps1`
 
 ## Notes
 

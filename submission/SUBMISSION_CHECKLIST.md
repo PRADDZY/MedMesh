@@ -15,6 +15,7 @@
 
 - Set `MEDMESH_APP_URL` to a real LAN URL on the demo laptop.
 - If running live, point the QVAC env vars at downloaded local model files.
+- Run `powershell -ExecutionPolicy Bypass -File .\scripts\mock-smoke.ps1` for a reproducible local sanity check before the final demo.
 - Capture screenshots of:
   - mobile intake screen
   - peer console with pairing code
