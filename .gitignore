@@ -1,0 +1,17 @@
+.worktrees/
+node_modules/
+dist/
+build/
+.expo/
+.turbo/
+coverage/
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+*.log
+
+# Local hackathon research saves
+QVAC Hackathon I - Unleash edge AI _ Hackathon _ DoraHacks.html
+QVAC Hackathon I - Unleash edge AI _ Hackathon _ DoraHacks_files/
+tracks.html
+tracks_files/
