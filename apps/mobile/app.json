@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "MedMesh",
+    "slug": "medmesh-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "MedMesh uses the camera to capture referral papers and field notes.",
+        "NSMicrophoneUsageDescription": "MedMesh uses the microphone for clinician voice handoff notes.",
+        "NSPhotoLibraryUsageDescription": "MedMesh uses your photo library to attach local documents and paper records."
+      }
+    },
+    "android": {
+      "permissions": ["CAMERA", "RECORD_AUDIO"],
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": ["expo-sqlite"]
+  }
+}

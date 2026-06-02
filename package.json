@@ -1,0 +1,20 @@
+{
+  "name": "medmesh",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.10.0",
+  "scripts": {
+    "build": "pnpm -r --if-present build",
+    "dev:peer-ui": "pnpm --filter @medmesh/peer-ui dev",
+    "dev:peer-core": "pnpm --filter @medmesh/peer-core dev",
+    "dev:mobile": "pnpm --filter @medmesh/mobile start",
+    "lint": "pnpm -r --if-present lint",
+    "test": "pnpm -r --if-present test",
+    "typecheck": "pnpm -r --if-present typecheck"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.8.3"
+  }
+}

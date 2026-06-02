@@ -9,6 +9,11 @@ pnpm-lock.yaml
 package-lock.json
 yarn.lock
 *.log
+artifacts/
+data/
+apps/mobile/.claude/
+apps/mobile/package-lock.json
+services/peer-core/uploads/
 
 # Local hackathon research saves
 QVAC Hackathon I - Unleash edge AI _ Hackathon _ DoraHacks.html
