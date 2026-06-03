@@ -6,6 +6,11 @@ $port = if ([string]::IsNullOrWhiteSpace($env:MEDMESH_PORT)) {
 } else {
   $env:MEDMESH_PORT
 }
+$startupTimeoutSeconds = if ([string]::IsNullOrWhiteSpace($env:MEDMESH_VALIDATE_STARTUP_TIMEOUT_SEC)) {
+  900
+} else {
+  [int]$env:MEDMESH_VALIDATE_STARTUP_TIMEOUT_SEC
+}
 $env:MEDMESH_PORT = $port
 $env:MEDMESH_APP_URL = if ([string]::IsNullOrWhiteSpace($env:MEDMESH_APP_URL)) {
   "http://localhost:$port"
@@ -13,16 +18,42 @@ $env:MEDMESH_APP_URL = if ([string]::IsNullOrWhiteSpace($env:MEDMESH_APP_URL)) {
   $env:MEDMESH_APP_URL.TrimEnd('/')
 }
 $peerUrl = $env:MEDMESH_APP_URL
+$validationDir = Join-Path $repoRoot 'artifacts\validation'
+$stdoutLog = Join-Path $validationDir 'live-validate-peer.out.log'
+$stderrLog = Join-Path $validationDir 'live-validate-peer.err.log'
 
 $proc = $null
 $client = $null
 
 try {
   Add-Type -AssemblyName System.Net.Http
-  $proc = Start-Process -FilePath 'pnpm.cmd' -ArgumentList '--filter','@medmesh/peer-core','exec','tsx','src/index.ts' -WorkingDirectory $repoRoot -WindowStyle Hidden -PassThru
-  Start-Sleep -Seconds 8
+  New-Item -ItemType Directory -Force -Path $validationDir | Out-Null
+  $proc = Start-Process -FilePath 'pnpm.cmd' -ArgumentList '--filter','@medmesh/peer-core','exec','tsx','src/index.ts' -WorkingDirectory $repoRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog
 
-  $health = Invoke-RestMethod -Uri "$peerUrl/health" -Method Get
+  $deadline = (Get-Date).AddSeconds($startupTimeoutSeconds)
+  $health = $null
+
+  while ((Get-Date) -lt $deadline) {
+    if ($proc.HasExited) {
+      $stderr = if (Test-Path $stderrLog) { Get-Content $stderrLog -Raw } else { '' }
+      $stdout = if (Test-Path $stdoutLog) { Get-Content $stdoutLog -Raw } else { '' }
+      throw "peer-core exited before health check.`nSTDERR:`n$stderr`nSTDOUT:`n$stdout"
+    }
+
+    try {
+      $health = Invoke-RestMethod -Uri "$peerUrl/health" -Method Get
+      break
+    } catch {
+      Start-Sleep -Seconds 5
+    }
+  }
+
+  if (-not $health) {
+    $stderr = if (Test-Path $stderrLog) { Get-Content $stderrLog -Raw } else { '' }
+    $stdout = if (Test-Path $stdoutLog) { Get-Content $stdoutLog -Raw } else { '' }
+    throw "peer-core did not become ready within $startupTimeoutSeconds seconds.`nSTDERR:`n$stderr`nSTDOUT:`n$stdout"
+  }
+
   if ($health.runtime.effectiveMode -ne 'live') {
     throw "Expected effectiveMode=live but got requested=$($health.runtime.requestedMode), effective=$($health.runtime.effectiveMode), error=$($health.runtime.liveInitError)"
   }
@@ -81,10 +112,7 @@ try {
   if ($current.status -ne 'completed') {
     throw "Live validation job did not complete: $($current.status)"
   }
-
-  $outputDir = Join-Path $repoRoot 'artifacts\validation'
-  New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
-  $outputPath = Join-Path $outputDir 'live-validation.json'
+  $outputPath = Join-Path $validationDir 'live-validation.json'
 
   $report = [PSCustomObject]@{
     capturedAt = (Get-Date).ToString('o')

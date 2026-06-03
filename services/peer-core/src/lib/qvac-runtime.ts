@@ -13,9 +13,19 @@ import {
 } from "@medmesh/shared";
 
 import type { MedMeshConfig } from "../config.js";
+import {
+  buildLiveModelPlan,
+  type QvacModelSource,
+} from "./live-models.js";
+import { checkLiveRuntimeSupport } from "./live-preflight.js";
 
-type QvacSdkModule = typeof import("@qvac/sdk");
 type ModelType = ModelStatus["modelType"];
+
+async function importQvacSdk() {
+  return import("@qvac/sdk");
+}
+
+type QvacSdkModule = Awaited<ReturnType<typeof importQvacSdk>>;
 
 interface SummaryInput {
   packet: CasePacket;
@@ -47,7 +57,7 @@ interface AnswerResult {
 interface ModelLoadConfig {
   modelType: ModelType;
   label: string;
-  modelSrc?: string;
+  modelSrc?: QvacModelSource;
   modelConfig?: Record<string, unknown>;
 }
 
@@ -107,9 +117,21 @@ export class QvacRuntime {
     }
 
     const initErrors: string[] = [];
+    const preflight = checkLiveRuntimeSupport();
+
+    if (!preflight.ok) {
+      const message = preflight.error ?? "QVAC live preflight failed";
+      this.runtimeStatus.models = this.runtimeStatus.models.map((model) => ({
+        ...model,
+        status: model.required ? "failed" : "skipped",
+        error: model.required ? message : "Optional model not attempted because live preflight failed",
+      }));
+      this.applyLiveFallback(message);
+      return;
+    }
 
     try {
-      this.sdk = await import("@qvac/sdk");
+      this.sdk = await importQvacSdk();
     } catch (error) {
       this.applyLiveFallback(
         `Could not import @qvac/sdk: ${this.normalizeError(error)}`,
@@ -117,10 +139,24 @@ export class QvacRuntime {
       return;
     }
 
+    const liveModelPlan = buildLiveModelPlan(this.config);
+    this.patchModelStatus("llm", {
+      source: liveModelPlan.llm.sourceLabel,
+    });
+    this.patchModelStatus("whisper", {
+      source: liveModelPlan.whisper.sourceLabel,
+    });
+    this.patchModelStatus("ocr", {
+      source: liveModelPlan.ocr.sourceLabel,
+    });
+    this.patchModelStatus("embeddings", {
+      source: liveModelPlan.embeddings.sourceLabel,
+    });
+
     this.llmModelId = await this.loadModel({
       modelType: "llm",
       label: "MedPsy Reasoner",
-      modelSrc: this.config.llmModelSrc,
+      modelSrc: liveModelPlan.llm.source,
       modelConfig: {
         ctx_size: this.config.ctxSize,
         gpu_layers: this.config.gpuLayers,
@@ -131,10 +167,11 @@ export class QvacRuntime {
       {
         modelType: "whisper",
         label: "Whisper Transcriber",
-        modelSrc: this.config.whisperModelSrc,
+        modelSrc: liveModelPlan.whisper.source,
         modelConfig: {
           language: "en",
           strategy: "greedy",
+          vadModelSrc: liveModelPlan.vad.source,
         },
       },
       initErrors,
@@ -144,7 +181,7 @@ export class QvacRuntime {
       {
         modelType: "ocr",
         label: "OCR Extractor",
-        modelSrc: this.config.ocrModelSrc,
+        modelSrc: liveModelPlan.ocr.source,
         modelConfig: {
           langList: ["en"],
           pipelineMode: "easyocr",
@@ -158,7 +195,7 @@ export class QvacRuntime {
       {
         modelType: "embeddings",
         label: "Protocol Embeddings",
-        modelSrc: this.config.embeddingsModelSrc,
+        modelSrc: liveModelPlan.embeddings.source,
         modelConfig: {
           batchSize: 64,
           pooling: "mean",

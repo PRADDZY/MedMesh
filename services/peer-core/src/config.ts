@@ -11,6 +11,7 @@ export interface MedMeshConfig {
   providerTopic: string;
   llmModelSrc?: string;
   whisperModelSrc?: string;
+  vadModelSrc?: string;
   ocrModelSrc?: string;
   embeddingsModelSrc?: string;
   ctxSize: number;
@@ -69,6 +70,7 @@ export function loadConfig(): MedMeshConfig {
       "6d65646d6573682d706565722d746f7069632d64656d6f".padEnd(64, "0"),
     llmModelSrc: process.env.MEDMESH_LLM_MODEL_SRC,
     whisperModelSrc: process.env.MEDMESH_WHISPER_MODEL_SRC,
+    vadModelSrc: process.env.MEDMESH_VAD_MODEL_SRC,
     ocrModelSrc: process.env.MEDMESH_OCR_MODEL_SRC,
     embeddingsModelSrc: process.env.MEDMESH_EMBED_MODEL_SRC,
     ctxSize: parseNumber(process.env.MEDMESH_CTX_SIZE, 4096),

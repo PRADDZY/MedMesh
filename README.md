@@ -27,18 +27,34 @@ pnpm --filter @medmesh/peer-ui dev
 pnpm --filter @medmesh/mobile start
 ```
 
-Default peer-core mode is `mock`, which keeps the demo runnable without downloading large models. For a live QVAC setup, copy `services/peer-core/.env.example` to `services/peer-core/.env` or export the same variables in your shell.
+Default peer-core mode is `mock`, which keeps the demo runnable without downloading large models. For a live QVAC setup, copy `services/peer-core/.env.example` to `services/peer-core/.env` only if you want to override the default live model sources.
 
 ## Live QVAC mode
 
-Set these before starting `peer-core`:
+The fastest live path is:
 
 ```powershell
 $env:MEDMESH_QVAC_MODE='live'
-$env:MEDMESH_LLM_MODEL_SRC='C:\models\qvac\MedPsy-1.7B-Q4.gguf'
-$env:MEDMESH_WHISPER_MODEL_SRC='C:\models\qvac\whisper-tiny.bin'
-$env:MEDMESH_OCR_MODEL_SRC='C:\models\qvac\ocr-detector.onnx'
-$env:MEDMESH_EMBED_MODEL_SRC='C:\models\qvac\embed.gguf'
+pnpm prepare:live
+pnpm validate:live
+```
+
+By default, MedMesh now uses pinned official live sources:
+
+- `MedPsy 1.7B Q4_K_M` from `qvac/MedPsy-1.7B-GGUF`
+- `WHISPER_TINY` plus `VAD_SILERO_5_1_2`
+- `OCR_LATIN_RECOGNIZER_1`
+- embeddings are skipped unless you explicitly configure `MEDMESH_EMBED_MODEL_SRC`
+
+You can still override any model source with a local path, registry URI, or direct remote URL:
+
+```powershell
+$env:MEDMESH_QVAC_MODE='live'
+$env:MEDMESH_LLM_MODEL_SRC='C:\models\qvac\custom-medpsy.gguf'
+$env:MEDMESH_WHISPER_MODEL_SRC='C:\models\qvac\custom-whisper.bin'
+$env:MEDMESH_VAD_MODEL_SRC='C:\models\qvac\custom-vad.bin'
+$env:MEDMESH_OCR_MODEL_SRC='C:\models\qvac\custom-ocr.onnx'
+$env:MEDMESH_EMBED_MODEL_SRC='C:\models\qvac\custom-embed.gguf'
 ```
 
 Optional:
@@ -48,11 +64,14 @@ Optional:
 - `MEDMESH_CTX_SIZE` and `MEDMESH_GPU_LAYERS` - tune for the demo laptop
 - `MEDMESH_DEVICE_LABEL` and `MEDMESH_GPU_LABEL` - improve the hardware manifest shown in `peer-ui`
 
+If the current Windows demo laptop struggles in live mode, start by lowering `MEDMESH_GPU_LAYERS` and `MEDMESH_CTX_SIZE` rather than changing the workflow.
+
 The service loads `.env` from the repo root and `services/peer-core/.env`, with the service-local file taking precedence.
 
 ## Demo flow
 
-1. Start `peer-core` and open `peer-ui`.
+1. Run `pnpm prepare:live` once if you want the cache warm before the demo.
+2. Start `peer-core` and open `peer-ui`.
 2. On the phone, enter the peer URL and pairing code shown on the console.
 3. Fill the emergency handoff fields, attach one or more document photos, and record a voice note.
 4. Save locally once, then submit to peer.
@@ -68,6 +87,7 @@ Artifacts default to:
 
 - `pnpm typecheck`
 - `pnpm build`
+- `pnpm prepare:live:dry`
 - Mock peer-core smoke test via `powershell -ExecutionPolicy Bypass -File .\scripts\mock-smoke.ps1`
 - Live validation script via `powershell -ExecutionPolicy Bypass -File .\scripts\live-validate.ps1`
 - Hardware capture helper via `powershell -ExecutionPolicy Bypass -File .\scripts\capture-hardware.ps1`
@@ -78,3 +98,5 @@ Artifacts default to:
 - `Build in Public` assets are intentionally not included in v1.
 - This repo keeps a strict non-diagnostic boundary throughout the UI, exports, and peer service.
 - A requested `live` run no longer silently masquerades as live if initialization fails; `/health` exposes requested mode, effective mode, model errors, and hardware metadata.
+- `pnpm prepare:live` writes `artifacts/validation/live-prewarm.json`, and `pnpm validate:live` now waits through longer first-run startup while capturing peer-core stdout/stderr logs.
+- On this current Windows host, live preflight is also honest about upstream runtime support. If `bare-runtime-win32-x64` is unavailable, MedMesh degrades to mock with an explicit blocker message instead of crashing.

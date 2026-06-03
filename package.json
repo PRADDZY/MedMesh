@@ -10,6 +10,8 @@
     "dev:peer-core": "pnpm --filter @medmesh/peer-core dev",
     "dev:mobile": "pnpm --filter @medmesh/mobile start",
     "lint": "pnpm -r --if-present lint",
+    "prepare:live": "pnpm --filter @medmesh/peer-core exec tsx scripts/prewarm-live.ts",
+    "prepare:live:dry": "pnpm --filter @medmesh/peer-core exec tsx scripts/prewarm-live.ts --dry-run",
     "test": "pnpm -r --if-present test",
     "typecheck": "pnpm -r --if-present typecheck",
     "validate:live": "powershell -ExecutionPolicy Bypass -File .\\scripts\\live-validate.ps1",
