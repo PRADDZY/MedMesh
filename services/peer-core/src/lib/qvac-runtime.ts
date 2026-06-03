@@ -64,6 +64,7 @@ interface ModelLoadConfig {
 export class QvacRuntime {
   private sdk?: QvacSdkModule;
   private runtimeStatus: RuntimeStatus;
+  private readonly liveModelPlan: ReturnType<typeof buildLiveModelPlan>;
   private llmModelId?: string;
   private whisperModelId?: string;
   private ocrModelId?: string;
@@ -72,34 +73,47 @@ export class QvacRuntime {
   constructor(private readonly config: MedMeshConfig) {
     const requestedMode = config.qvacMode;
     const hardware = this.buildHardwareSummary();
+    this.liveModelPlan = buildLiveModelPlan(config);
 
     this.runtimeStatus = {
       requestedMode,
       effectiveMode: "mock",
       mode: "mock",
+      liveProfile: config.liveProfile,
       health: requestedMode === "mock" ? "ready" : "degraded",
       providerStarted: false,
       providerTopic: config.providerTopic,
       providerPublicKey: "",
+      preflight: undefined,
       hardware,
       artifactPaths: {
         dataDir: config.dataDir,
         evidenceDir: config.evidenceDir,
       },
       models: [
-        this.createModelStatus("llm", "MedPsy Reasoner", config.llmModelSrc, true),
+        this.createModelStatus(
+          "llm",
+          "MedPsy Reasoner",
+          this.liveModelPlan.llm.sourceLabel,
+          config.liveProfile === "full",
+        ),
         this.createModelStatus(
           "whisper",
           "Whisper Transcriber",
-          config.whisperModelSrc,
+          this.liveModelPlan.whisper.sourceLabel,
           true,
         ),
-        this.createModelStatus("ocr", "OCR Extractor", config.ocrModelSrc, true),
+        this.createModelStatus(
+          "ocr",
+          "OCR Extractor",
+          this.liveModelPlan.ocr.sourceLabel,
+          true,
+        ),
         this.createModelStatus(
           "embeddings",
           "Protocol Embeddings",
-          config.embeddingsModelSrc,
-          false,
+          this.liveModelPlan.embeddings.sourceLabel,
+          config.liveProfile === "full",
         ),
       ],
     };
@@ -118,9 +132,12 @@ export class QvacRuntime {
 
     const initErrors: string[] = [];
     const preflight = checkLiveRuntimeSupport();
+    this.runtimeStatus.preflight = preflight;
 
     if (!preflight.ok) {
-      const message = preflight.error ?? "QVAC live preflight failed";
+      const message =
+        preflight.error ??
+        `QVAC live preflight failed at ${preflight.failureStage ?? "unknown stage"}`;
       this.runtimeStatus.models = this.runtimeStatus.models.map((model) => ({
         ...model,
         status: model.required ? "failed" : "skipped",
@@ -139,39 +156,41 @@ export class QvacRuntime {
       return;
     }
 
-    const liveModelPlan = buildLiveModelPlan(this.config);
     this.patchModelStatus("llm", {
-      source: liveModelPlan.llm.sourceLabel,
+      source: this.liveModelPlan.llm.sourceLabel,
     });
     this.patchModelStatus("whisper", {
-      source: liveModelPlan.whisper.sourceLabel,
+      source: this.liveModelPlan.whisper.sourceLabel,
     });
     this.patchModelStatus("ocr", {
-      source: liveModelPlan.ocr.sourceLabel,
+      source: this.liveModelPlan.ocr.sourceLabel,
     });
     this.patchModelStatus("embeddings", {
-      source: liveModelPlan.embeddings.sourceLabel,
+      source: this.liveModelPlan.embeddings.sourceLabel,
     });
 
-    this.llmModelId = await this.loadModel({
-      modelType: "llm",
-      label: "MedPsy Reasoner",
-      modelSrc: liveModelPlan.llm.source,
-      modelConfig: {
-        ctx_size: this.config.ctxSize,
-        gpu_layers: this.config.gpuLayers,
+    this.llmModelId = await this.loadModel(
+      {
+        modelType: "llm",
+        label: "MedPsy Reasoner",
+        modelSrc: this.liveModelPlan.llm.source,
+        modelConfig: {
+          ctx_size: this.config.ctxSize,
+          gpu_layers: this.config.gpuLayers,
+        },
       },
-    }, initErrors);
+      initErrors,
+    );
 
     this.whisperModelId = await this.loadModel(
       {
         modelType: "whisper",
         label: "Whisper Transcriber",
-        modelSrc: liveModelPlan.whisper.source,
+        modelSrc: this.liveModelPlan.whisper.source,
         modelConfig: {
           language: "en",
           strategy: "greedy",
-          vadModelSrc: liveModelPlan.vad.source,
+          vadModelSrc: this.liveModelPlan.vad.source,
         },
       },
       initErrors,
@@ -181,7 +200,7 @@ export class QvacRuntime {
       {
         modelType: "ocr",
         label: "OCR Extractor",
-        modelSrc: liveModelPlan.ocr.source,
+        modelSrc: this.liveModelPlan.ocr.source,
         modelConfig: {
           langList: ["en"],
           pipelineMode: "easyocr",
@@ -195,7 +214,7 @@ export class QvacRuntime {
       {
         modelType: "embeddings",
         label: "Protocol Embeddings",
-        modelSrc: liveModelPlan.embeddings.source,
+        modelSrc: this.liveModelPlan.embeddings.source,
         modelConfig: {
           batchSize: 64,
           pooling: "mean",
@@ -204,7 +223,11 @@ export class QvacRuntime {
       initErrors,
     );
 
-    if (initErrors.length === 0 && this.llmModelId && this.sdk) {
+    if (
+      initErrors.length === 0 &&
+      this.sdk &&
+      (this.whisperModelId || this.ocrModelId || this.llmModelId)
+    ) {
       try {
         const provider = await this.sdk.startQVACProvider({
           topic: this.config.providerTopic,
@@ -212,9 +235,7 @@ export class QvacRuntime {
         this.runtimeStatus.providerStarted = true;
         this.runtimeStatus.providerPublicKey = provider.publicKey;
       } catch (error) {
-        initErrors.push(
-          `Provider start failed: ${this.normalizeError(error)}`,
-        );
+        this.runtimeStatus.providerError = this.normalizeError(error);
       }
     }
 
@@ -227,6 +248,7 @@ export class QvacRuntime {
     this.runtimeStatus.mode = "live";
     this.runtimeStatus.health = "ready";
     this.runtimeStatus.liveInitError = undefined;
+    this.runtimeStatus.providerError = undefined;
   }
 
   getStatus(): RuntimeStatus {
@@ -386,6 +408,19 @@ export class QvacRuntime {
       };
     }
 
+    if (this.canUseLiveMode()) {
+      return {
+        summary: this.buildMockSummary({ packet, ocrText, transcript, citations }),
+        details: {
+          mode: "live",
+          parsedJson: false,
+          citationCount: citations.length,
+          summaryEngine: "deterministic-template",
+          liveProfile: this.runtimeStatus.liveProfile,
+        },
+      };
+    }
+
     return {
       summary: this.buildMockSummary({ packet, ocrText, transcript, citations }),
       details: {
@@ -437,6 +472,25 @@ export class QvacRuntime {
     const answer = leadCitation
       ? `Based on ${leadCitation.title}, prioritize a concise situation update, confirm completed interventions, and flag what still needs immediate reassessment. For this case, start with ${summary.presentingSituation.toLowerCase()}.`
       : "No protocol snippet matched strongly enough. Reconfirm the basics: identity, situation, vitals trend, interventions already performed, and what the receiving clinician should verify first.";
+
+    if (this.canUseLiveMode()) {
+      return {
+        answer: {
+          question,
+          answer,
+          grounded: citations.length > 0,
+          disclaimer: NON_DIAGNOSTIC_DISCLAIMER,
+          citations,
+        },
+        details: {
+          mode: "live",
+          grounded: citations.length > 0,
+          citationCount: citations.length,
+          answerEngine: "deterministic-template",
+          liveProfile: this.runtimeStatus.liveProfile,
+        },
+      };
+    }
 
     return {
       answer: {

@@ -1,0 +1,40 @@
+{
+    "capturedAt":  "2026-06-03T23:42:34.9953447+05:30",
+    "qualificationStatus":  "approved",
+    "recommendedRole":  "approved-live-demo-host",
+    "jobId":  "22e313ba-44ae-4a7f-981b-f5446d31fbc2",
+    "runtime":  {
+                    "requestedMode":  "live",
+                    "effectiveMode":  "live",
+                    "liveProfile":  "lite",
+                    "providerStarted":  true
+                },
+    "host":  {
+                 "computerName":  "PRATIKS-PC",
+                 "osName":  "Microsoft Windows 10 Pro",
+                 "cpuName":  "Intel(R) Core(TM) i3-1005G1 CPU @ 1.20GHz",
+                 "totalMemoryGb":  3.7
+             },
+    "copiedFiles":  [
+                        "live-doctor.json",
+                        "live-host-qualification.json",
+                        "live-health.json",
+                        "live-validation.json",
+                        "hardware-summary.json",
+                        "events.jsonl",
+                        "approved-export.md"
+                    ],
+    "screenshotChecklist":  [
+                                "mobile-intake.png",
+                                "peer-console-runtime.png",
+                                "peer-console-pairing.png",
+                                "peer-console-summary.png",
+                                "peer-console-grounded-answer.png",
+                                "completed-export.png",
+                                "hardware-model-status.png"
+                            ],
+    "pendingManualAssets":  [
+                                "screenshots in submission/final-assets/screenshots",
+                                "demo video link in submission/SUBMISSION_COPY.md"
+                            ]
+}

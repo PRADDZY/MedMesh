@@ -1,0 +1,107 @@
+{
+    "ok":  true,
+    "app":  "MedMesh Peer Core",
+    "disclaimer":  "MedMesh is a workflow support tool for handoff, summarization, and grounded retrieval. It does not diagnose, prescribe, or replace clinical judgement.",
+    "runtime":  {
+                    "requestedMode":  "live",
+                    "effectiveMode":  "live",
+                    "mode":  "live",
+                    "liveProfile":  "lite",
+                    "health":  "ready",
+                    "providerStarted":  true,
+                    "providerTopic":  "6d65646d6573682d706565722d746f7069632d64656d6f000000000000000000",
+                    "providerPublicKey":  "0265a2957d0c006b607f1bf6382fa7d27061142fe1de502dc140450986b3eaff",
+                    "preflight":  {
+                                      "ok":  true,
+                                      "packageName":  "bare-runtime-win32-x64",
+                                      "platform":  "win32",
+                                      "arch":  "x64",
+                                      "resolvedPaths":  {
+                                                            "customWorkerPath":  "C:\\Users\\Pratik Daithankar\\Desktop\\qvac\\.worktrees\\feat-medmesh-v1\\qvac\\worker.entry.mjs",
+                                                            "sdkPath":  "C:\\Users\\Pratik Daithankar\\Desktop\\qvac\\.worktrees\\feat-medmesh-v1\\node_modules\\.pnpm\\@qvac+sdk@0.12.0_bare-buffe_c2363fc6e8ef7e174faf74ad031e48d0\\node_modules\\@qvac\\sdk\\dist\\index.js",
+                                                            "bareRuntimePath":  "C:\\Users\\Pratik Daithankar\\Desktop\\qvac\\.worktrees\\feat-medmesh-v1\\node_modules\\.pnpm\\bare-runtime@1.28.6_bare-ab_25b87e1575297172d7a5b0b6e4e258ec\\node_modules\\bare-runtime\\index.js",
+                                                            "platformRuntimePath":  "C:\\Users\\Pratik Daithankar\\Desktop\\qvac\\.worktrees\\feat-medmesh-v1\\node_modules\\.pnpm\\bare-runtime-win32-x64@1.28.6_bare-url@2.4.3\\node_modules\\bare-runtime-win32-x64\\index.js",
+                                                            "requireAssetPath":  "C:\\Users\\Pratik Daithankar\\Desktop\\qvac\\.worktrees\\feat-medmesh-v1\\node_modules\\.pnpm\\require-asset@1.2.2_bare-url@2.4.3\\node_modules\\require-asset\\lib\\node.js",
+                                                            "bareBinaryPath":  "C:\\Users\\Pratik Daithankar\\Desktop\\qvac\\.worktrees\\feat-medmesh-v1\\node_modules\\.pnpm\\bare-runtime-win32-x64@1.28.6_bare-url@2.4.3\\node_modules\\bare-runtime-win32-x64\\bin\\bare.exe"
+                                                        }
+                                  },
+                    "hardware":  {
+                                     "deviceLabel":  "MedMesh Peer Laptop",
+                                     "platform":  "win32",
+                                     "release":  "10.0.19045",
+                                     "arch":  "x64",
+                                     "cpuModel":  "Intel(R) Core(TM) i3-1005G1 CPU @ 1.20GHz",
+                                     "cpuCores":  4,
+                                     "totalMemoryGb":  3.7,
+                                     "collectedAt":  "2026-06-03T18:11:25.922Z"
+                                 },
+                    "artifactPaths":  {
+                                          "dataDir":  "C:\\Users\\Pratik Daithankar\\Desktop\\qvac\\.worktrees\\feat-medmesh-v1\\data\\peer-core",
+                                          "evidenceDir":  "C:\\Users\\Pratik Daithankar\\Desktop\\qvac\\.worktrees\\feat-medmesh-v1\\artifacts\\evidence"
+                                      },
+                    "models":  [
+                                   {
+                                       "name":  "MedPsy Reasoner",
+                                       "modelType":  "llm",
+                                       "required":  false,
+                                       "status":  "skipped",
+                                       "loaded":  false,
+                                       "delegated":  false,
+                                       "error":  "Optional model not configured"
+                                   },
+                                   {
+                                       "name":  "Whisper Transcriber",
+                                       "modelType":  "whisper",
+                                       "source":  "registry://hf/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-tiny.bin",
+                                       "required":  true,
+                                       "status":  "loaded",
+                                       "loaded":  true,
+                                       "delegated":  false,
+                                       "modelId":  "fd786211d311e5d8"
+                                   },
+                                   {
+                                       "name":  "OCR Extractor",
+                                       "modelType":  "ocr",
+                                       "source":  "registry://s3/qvac_models_compiled/ocr/2026-02-12/rec_dyn/recognizer_latin.onnx",
+                                       "required":  true,
+                                       "status":  "loaded",
+                                       "loaded":  true,
+                                       "delegated":  false,
+                                       "modelId":  "b30bf05a01333e6e"
+                                   },
+                                   {
+                                       "name":  "Protocol Embeddings",
+                                       "modelType":  "embeddings",
+                                       "required":  false,
+                                       "status":  "skipped",
+                                       "loaded":  false,
+                                       "delegated":  false,
+                                       "error":  "Optional model not configured"
+                                   }
+                               ]
+                },
+    "pairing":  {
+                    "code":  "BTCY4T",
+                    "topic":  "6d65646d6573682d706565722d746f7069632d64656d6f000000000000000000",
+                    "providerPublicKey":  "0265a2957d0c006b607f1bf6382fa7d27061142fe1de502dc140450986b3eaff",
+                    "providerMode":  "live",
+                    "baseUrl":  "http://localhost:4768",
+                    "generatedAt":  "2026-06-03T18:11:44.157Z",
+                    "expiresAt":  "2026-06-04T18:11:44.157Z",
+                    "qrValue":  "{\"code\":\"BTCY4T\",\"baseUrl\":\"http://localhost:4768\",\"topic\":\"6d65646d6573682d706565722d746f7069632d64656d6f000000000000000000\",\"providerPublicKey\":\"0265a2957d0c006b607f1bf6382fa7d27061142fe1de502dc140450986b3eaff\"}"
+                },
+    "remoteApis":  {
+                       "aiServices":  [
+
+                                      ],
+                       "utilityServices":  [
+
+                                           ],
+                       "notes":  "MedMesh keeps AI workloads on-device or on trusted peer hardware. Optional utilities should be disclosed before submission."
+                   },
+    "jobCount":  11,
+    "artifactPaths":  {
+                          "dataDir":  "C:\\Users\\Pratik Daithankar\\Desktop\\qvac\\.worktrees\\feat-medmesh-v1\\data\\peer-core",
+                          "evidenceDir":  "C:\\Users\\Pratik Daithankar\\Desktop\\qvac\\.worktrees\\feat-medmesh-v1\\artifacts\\evidence"
+                      }
+}

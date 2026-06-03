@@ -9,6 +9,8 @@
     "dev:peer-ui": "pnpm --filter @medmesh/peer-ui dev",
     "dev:peer-core": "pnpm --filter @medmesh/peer-core dev",
     "dev:mobile": "pnpm --filter @medmesh/mobile start",
+    "doctor:live": "pnpm --filter @medmesh/peer-core exec tsx scripts/live-doctor.ts",
+    "freeze:submission-assets": "powershell -ExecutionPolicy Bypass -File .\\scripts\\freeze-submission-assets.ps1",
     "lint": "pnpm -r --if-present lint",
     "prepare:live": "pnpm --filter @medmesh/peer-core exec tsx scripts/prewarm-live.ts",
     "prepare:live:dry": "pnpm --filter @medmesh/peer-core exec tsx scripts/prewarm-live.ts --dry-run",
@@ -18,6 +20,11 @@
     "typecheck": "pnpm -r --if-present typecheck",
     "validate:live": "powershell -ExecutionPolicy Bypass -File .\\scripts\\live-validate.ps1",
     "validate:mock": "powershell -ExecutionPolicy Bypass -File .\\scripts\\mock-smoke.ps1"
+  },
+  "dependencies": {
+    "@qvac/sdk": "0.12.0",
+    "bare-process": "^4.4.1",
+    "require-asset": "1.2.2"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

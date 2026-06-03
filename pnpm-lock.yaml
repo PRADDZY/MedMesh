@@ -7,6 +7,16 @@ settings:
 importers:
 
   .:
+    dependencies:
+      '@qvac/sdk':
+        specifier: 0.12.0
+        version: 0.12.0(bare-buffer@3.6.1)(bare-url@2.4.3)(expo@56.0.8)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.16)(react@19.2.7))(react@19.2.7)(tsx@4.22.4)
+      bare-process:
+        specifier: ^4.4.1
+        version: 4.4.1(bare-abort-controller@1.1.2)(bare-buffer@3.6.1)
+      require-asset:
+        specifier: 1.2.2
+        version: 1.2.2(bare-url@2.4.3)
     devDependencies:
       '@types/node':
         specifier: ^24.0.0
@@ -6300,7 +6310,7 @@ snapshots:
       react-refresh: 0.14.2
     optionalDependencies:
       '@babel/runtime': 7.29.7
-      expo: 56.0.8(@babel/core@7.29.7)(@expo/dom-webview@56.0.5)(react-dom@19.2.7(react@19.2.3))(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.16)(react@19.2.3))(react@19.2.3)(typescript@6.0.3)
+      expo: 56.0.8(@babel/core@7.29.7)(@expo/dom-webview@56.0.5)(react-dom@19.2.7(react@19.2.7))(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.16)(react@19.2.7))(react@19.2.7)(typescript@5.9.3)
     transitivePeerDependencies:
       - '@babel/core'
       - supports-color
@@ -8539,7 +8549,7 @@ snapshots:
 
   md5.js@1.3.5:
     dependencies:
-      hash-base: 3.0.5
+      hash-base: 3.1.2
       inherits: 2.0.4
       safe-buffer: 5.2.1
 
@@ -9341,7 +9351,6 @@ snapshots:
       bare-module-resolve: 1.12.2(bare-url@2.4.3)
     transitivePeerDependencies:
       - bare-url
-    optional: true
 
   require-directory@2.1.1: {}
 

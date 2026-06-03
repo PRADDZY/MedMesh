@@ -1,26 +1,25 @@
 # Hardware Evidence Notes
 
-## Recommended capture set
+## Approved topology
 
-- Android phone showing the intake flow
-- Windows laptop running:
-  - `peer-core`
-  - `peer-ui`
-  - local files for evidence output
+- Android phone for capture
+- Current Windows laptop as the approved live QVAC peer
 
 ## What to capture
 
-- Laptop specs page or task manager snapshot
+- Laptop specs page or Task Manager snapshot
 - Phone model and Android version
-- Peer console with runtime mode and model status
-- Evidence export directory after a completed run
-- `artifacts/hardware/hardware-summary.json` from `scripts/capture-hardware.ps1`
-- `artifacts/validation/live-host-qualification.json` from `scripts/qualify-live-host.ps1`
+- Peer console with runtime mode, pairing code, and model status
+- Evidence export directory after a completed live run
+- `artifacts/hardware/hardware-summary.json`
+- `artifacts/validation/live-host-qualification.json`
+- `artifacts/validation/live-doctor.json`
 
 ## Suggested filenames
 
 - `hardware-laptop.png`
 - `hardware-phone.png`
 - `peer-console-runtime.png`
+- `peer-console-pairing.png`
 - `mobile-intake.png`
 - `completed-export.png`

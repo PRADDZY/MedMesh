@@ -3,37 +3,44 @@
 ## Requirements alignment
 
 - `Open source` - repo includes a root `MIT` license and public README.
-- `Uses @qvac/sdk` - wired in `services/peer-core/src/lib/qvac-runtime.ts`.
+- `Uses @qvac/sdk` - live OCR, live transcription, provider startup, and model orchestration are wired through `services/peer-core`.
 - `No cloud AI API dependency` - no remote AI services are configured or required.
-- `Local / peer-local inference story` - phone capture app submits to nearby peer; peer can run mock or live QVAC mode.
+- `Local / peer-local inference story` - phone capture app submits to a nearby Windows peer that runs the approved local QVAC flow.
 - `Multimodal flow` - structured text, document photos, and voice note are all supported.
-- `Artifact quality` - peer console, markdown export, and JSONL evidence log are included.
-- `Reproducibility` - quick start, env example, demo script, and validation scripts are included.
-- `Psy Models fit` - behavioral-health context and de-escalation grounding are built into intake and protocol pack.
+- `Artifact quality` - peer console, markdown export, doctor report, validation JSONs, and JSONL evidence log are included.
+- `Reproducibility` - quick start, env example, demo script, doctor script, qualification script, and frozen assets are included.
+- `Honest scope` - the approved current-laptop path uses the `lite` live profile: live Whisper + OCR, deterministic local summary/grounded assembly, non-diagnostic workflow support.
 
 ## Before submission
 
-- Run `pnpm qualify:live-host:dry` on the candidate borrowed machine and confirm `artifacts/validation/live-host-qualification.json` says `candidate-live-host` or better.
-- Run `pnpm qualify:live-host` on the borrowed machine and confirm `qualificationStatus=approved` before using it in the final demo.
-- Set `MEDMESH_APP_URL` to a real LAN URL on the demo laptop.
-- If running live, either use the pinned default QVAC sources or override them in `services/peer-core/.env`.
-- Run `powershell -ExecutionPolicy Bypass -File .\scripts\mock-smoke.ps1` for a reproducible local sanity check.
-- Keep `artifacts/validation/live-host-qualification.json`, `artifacts/validation/live-health.json`, and `artifacts/validation/live-validation.json` from the approved host.
-- Keep `artifacts/hardware/hardware-summary.json` from the approved host.
+- Run `pnpm doctor:live` and keep `artifacts/validation/live-doctor.json`.
+- Run `pnpm qualify:live-host:dry` on this laptop and confirm `candidate-live-host` or better.
+- Run `pnpm qualify:live-host` on this laptop and confirm `qualificationStatus=approved` before the final demo.
+- Set `MEDMESH_APP_URL` to a real LAN URL on the laptop when recording the phone demo.
+- Run `powershell -ExecutionPolicy Bypass -File .\scripts\mock-smoke.ps1` for a reproducible fallback sanity check.
+- Run `pnpm freeze:submission-assets` after the approved live run.
+- Keep these generated artifacts:
+  - `artifacts/validation/live-doctor.json`
+  - `artifacts/validation/live-host-qualification.json`
+  - `artifacts/validation/live-health.json`
+  - `artifacts/validation/live-validation.json`
+  - `artifacts/hardware/hardware-summary.json`
+  - `artifacts/evidence/events.jsonl`
+  - `submission/final-assets/approved-export.md`
+  - `submission/final-assets/freeze-manifest.json`
 - Capture screenshots of:
-  - mobile intake screen
-  - peer console runtime status
-  - peer console with pairing code
-  - completed job summary and grounded answer
-  - markdown export
-  - hardware/model status
+  - `submission/final-assets/screenshots/mobile-intake.png`
+  - `submission/final-assets/screenshots/peer-console-runtime.png`
+  - `submission/final-assets/screenshots/peer-console-pairing.png`
+  - `submission/final-assets/screenshots/peer-console-summary.png`
+  - `submission/final-assets/screenshots/peer-console-grounded-answer.png`
+  - `submission/final-assets/screenshots/completed-export.png`
+  - `submission/final-assets/screenshots/hardware-model-status.png`
 - Record a short demo video following `submission/DEMO_SCRIPT.md`.
-- Export `artifacts/evidence/events.jsonl` after the final demo run.
 
 ## Honest current caveats
 
-- Pairing is manual URL + code entry today; the peer console already emits a QR payload for the next step.
-- The default repo mode is `mock` so the demo stays runnable without large local models.
-- Live QVAC mode still needs a first-run model download or cache warmup, but it no longer depends on manually browsing for file paths before you can start.
-- Embeddings are not used in the current lexical protocol search path, so `MEDMESH_EMBED_MODEL_SRC` is intentionally optional.
-- This specific Windows dev environment currently fails QVAC live preflight because the upstream `bare-runtime-win32-x64` package is missing; it should be treated as `dev-or-controller-only` unless the qualification artifact changes.
+- Pairing is manual URL + code entry today.
+- The approved live profile on this machine is `lite`, not `full`.
+- `full` mode remains opt-in for stronger hardware and is not part of the current approved evidence bundle.
+- The automated live validator proves real live runtime startup plus a completed live job, but the final demo video should still include real phone-captured photos/audio for the strongest judge evidence.

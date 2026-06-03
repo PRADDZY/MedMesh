@@ -8,6 +8,7 @@ export interface MedMeshConfig {
   dataDir: string;
   evidenceDir: string;
   qvacMode: "mock" | "live";
+  liveProfile: "lite" | "full";
   providerTopic: string;
   llmModelSrc?: string;
   whisperModelSrc?: string;
@@ -65,6 +66,7 @@ export function loadConfig(): MedMeshConfig {
     dataDir,
     evidenceDir,
     qvacMode: process.env.MEDMESH_QVAC_MODE === "live" ? "live" : "mock",
+    liveProfile: process.env.MEDMESH_LIVE_PROFILE === "full" ? "full" : "lite",
     providerTopic:
       process.env.MEDMESH_PROVIDER_TOPIC ??
       "6d65646d6573682d706565722d746f7069632d64656d6f".padEnd(64, "0"),

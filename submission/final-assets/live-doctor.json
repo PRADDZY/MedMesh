@@ -1,0 +1,45 @@
+{
+  "capturedAt": "2026-06-03T18:11:11.354Z",
+  "requestedMode": "live",
+  "liveProfile": "lite",
+  "workerEntryPath": "C:\\Users\\Pratik Daithankar\\Desktop\\qvac\\.worktrees\\feat-medmesh-v1\\qvac\\worker.entry.mjs",
+  "preflight": {
+    "ok": true,
+    "packageName": "bare-runtime-win32-x64",
+    "platform": "win32",
+    "arch": "x64",
+    "resolvedPaths": {
+      "customWorkerPath": "C:\\Users\\Pratik Daithankar\\Desktop\\qvac\\.worktrees\\feat-medmesh-v1\\qvac\\worker.entry.mjs",
+      "sdkPath": "C:\\Users\\Pratik Daithankar\\Desktop\\qvac\\.worktrees\\feat-medmesh-v1\\node_modules\\.pnpm\\@qvac+sdk@0.12.0_bare-buffe_c2363fc6e8ef7e174faf74ad031e48d0\\node_modules\\@qvac\\sdk\\dist\\index.js",
+      "bareRuntimePath": "C:\\Users\\Pratik Daithankar\\Desktop\\qvac\\.worktrees\\feat-medmesh-v1\\node_modules\\.pnpm\\bare-runtime@1.28.6_bare-ab_25b87e1575297172d7a5b0b6e4e258ec\\node_modules\\bare-runtime\\index.js",
+      "platformRuntimePath": "C:\\Users\\Pratik Daithankar\\Desktop\\qvac\\.worktrees\\feat-medmesh-v1\\node_modules\\.pnpm\\bare-runtime-win32-x64@1.28.6_bare-url@2.4.3\\node_modules\\bare-runtime-win32-x64\\index.js",
+      "requireAssetPath": "C:\\Users\\Pratik Daithankar\\Desktop\\qvac\\.worktrees\\feat-medmesh-v1\\node_modules\\.pnpm\\require-asset@1.2.2_bare-url@2.4.3\\node_modules\\require-asset\\lib\\node.js",
+      "bareBinaryPath": "C:\\Users\\Pratik Daithankar\\Desktop\\qvac\\.worktrees\\feat-medmesh-v1\\node_modules\\.pnpm\\bare-runtime-win32-x64@1.28.6_bare-url@2.4.3\\node_modules\\bare-runtime-win32-x64\\bin\\bare.exe"
+    }
+  },
+  "selectedModels": {
+    "llm": null,
+    "whisper": "registry://hf/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-tiny.bin",
+    "vad": "registry://hf/ggml-org/whisper-vad/resolve/9ffd54a1e1ee413ddf265af9913beaf518d1639b/ggml-silero-v5.1.2.bin",
+    "ocr": "registry://s3/qvac_models_compiled/ocr/2026-02-12/rec_dyn/recognizer_latin.onnx",
+    "embeddings": null
+  },
+  "probes": {
+    "liteWorker": {
+      "profile": "lite",
+      "booted": true,
+      "exitCode": null,
+      "signal": null,
+      "stdout": "",
+      "stderr": ""
+    },
+    "fullWorker": {
+      "profile": "full",
+      "booted": true,
+      "exitCode": null,
+      "signal": null,
+      "stdout": "",
+      "stderr": ""
+    }
+  }
+}

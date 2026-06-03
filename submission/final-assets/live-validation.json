@@ -1,0 +1,16 @@
+{
+    "capturedAt":  "2026-06-03T23:41:45.3584370+05:30",
+    "requestedMode":  "live",
+    "effectiveMode":  "live",
+    "healthPath":  "C:\\Users\\Pratik Daithankar\\Desktop\\qvac\\.worktrees\\feat-medmesh-v1\\artifacts\\validation\\live-health.json",
+    "providerTopic":  "6d65646d6573682d706565722d746f7069632d64656d6f000000000000000000",
+    "providerPublicKey":  "0265a2957d0c006b607f1bf6382fa7d27061142fe1de502dc140450986b3eaff",
+    "deviceLabel":  "MedMesh Peer Laptop",
+    "cpuModel":  "Intel(R) Core(TM) i3-1005G1 CPU @ 1.20GHz",
+    "totalMemoryGb":  3.7,
+    "evidenceDir":  "C:\\Users\\Pratik Daithankar\\Desktop\\qvac\\.worktrees\\feat-medmesh-v1\\artifacts\\evidence",
+    "jobId":  "22e313ba-44ae-4a7f-981b-f5446d31fbc2",
+    "jobStatus":  "completed",
+    "summary":  "Shortness of breath and confusion captured on-device for emergency handoff.",
+    "grounded":  "Based on ISBAR Emergency Handoff, prioritize a concise situation update, confirm completed interventions, and flag what still needs immediate reassessment. For this case, start with receiving team should verify airway and med history.."
+}

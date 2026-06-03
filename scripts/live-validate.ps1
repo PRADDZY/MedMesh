@@ -26,6 +26,23 @@ $stderrLog = Join-Path $validationDir 'live-validate-peer.err.log'
 $proc = $null
 $client = $null
 
+function Stop-ProcessTree {
+  param(
+    [Parameter(Mandatory = $true)]
+    [int]$ProcessId
+  )
+
+  $children = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
+      $_.ParentProcessId -eq $ProcessId
+    })
+
+  foreach ($child in $children) {
+    Stop-ProcessTree -ProcessId $child.ProcessId
+  }
+
+  Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
+}
+
 try {
   Add-Type -AssemblyName System.Net.Http
   New-Item -ItemType Directory -Force -Path $validationDir | Out-Null
@@ -141,7 +158,7 @@ finally {
   if ($client) {
     $client.Dispose()
   }
-  if ($proc -and -not $proc.HasExited) {
-    Stop-Process -Id $proc.Id -Force
+  if ($proc) {
+    Stop-ProcessTree -ProcessId $proc.Id
   }
 }

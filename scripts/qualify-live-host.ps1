@@ -11,6 +11,7 @@ $qualificationMode = if ($DryRun) { 'dry' } else { 'live' }
 $enforceGate = -not $DryRun
 
 $hardwarePath = Join-Path $hardwareDir 'hardware-summary.json'
+$doctorPath = Join-Path $validationDir 'live-doctor.json'
 $prewarmPath = Join-Path $validationDir 'live-prewarm.json'
 $healthPath = Join-Path $validationDir 'live-health.json'
 $liveValidationPath = Join-Path $validationDir 'live-validation.json'
@@ -49,8 +50,22 @@ function Remove-StaleArtifact {
     [string]$Path
   )
 
-  if (Test-Path $Path) {
-    Remove-Item -LiteralPath $Path -Force
+  if (-not (Test-Path $Path)) {
+    return
+  }
+
+  for ($attempt = 1; $attempt -le 5; $attempt++) {
+    try {
+      if (Test-Path $Path) {
+        Remove-Item -LiteralPath $Path -Force
+      }
+      return
+    } catch {
+      if ($attempt -eq 5) {
+        throw
+      }
+      Start-Sleep -Seconds 2
+    }
   }
 }
 
@@ -59,6 +74,7 @@ New-Item -ItemType Directory -Force -Path $hardwareDir | Out-Null
 
 @(
   $prewarmPath,
+  $doctorPath,
   $healthPath,
   $liveValidationPath,
   $qualificationPath,
@@ -72,6 +88,7 @@ $failureReason = $null
 
 try {
   & powershell -ExecutionPolicy Bypass -File (Join-Path $repoRoot 'scripts\capture-hardware.ps1') | Out-Null
+  Invoke-PnpmScript -ScriptName 'doctor:live'
 
   if ($DryRun) {
     Invoke-PnpmScript -ScriptName 'prepare:live:dry'
@@ -92,6 +109,7 @@ try {
 
 $hardware = Read-JsonFile -Path $hardwarePath
 $prewarm = Read-JsonFile -Path $prewarmPath
+$doctor = Read-JsonFile -Path $doctorPath
 $health = Read-JsonFile -Path $healthPath
 $liveValidation = Read-JsonFile -Path $liveValidationPath
 
@@ -131,6 +149,16 @@ if (-not $failureReason) {
     } else {
       'Live validation report was not written.'
     }
+  }
+}
+
+if (-not $failureReason -and $doctor -and $doctor.probes -and $doctor.probes.fullWorker -and -not $doctor.probes.fullWorker.booted -and $doctor.liveProfile -eq 'full') {
+  $failureReason = if ($doctor.probes.fullWorker.error) {
+    $doctor.probes.fullWorker.error
+  } elseif ($doctor.probes.fullWorker.stderr) {
+    $doctor.probes.fullWorker.stderr
+  } else {
+    'Full worker probe did not boot successfully.'
   }
 }
 
@@ -219,6 +247,7 @@ $summary = [ordered]@{
   modelSources = $modelSources
   artifacts = [ordered]@{
     hardwareSummary = $hardwarePath
+    liveDoctor = if (Test-Path $doctorPath) { $doctorPath } else { $null }
     livePrewarm = $prewarmPath
     liveHealth = if (Test-Path $healthPath) { $healthPath } else { $null }
     liveValidation = if (Test-Path $liveValidationPath) { $liveValidationPath } else { $null }
@@ -226,11 +255,13 @@ $summary = [ordered]@{
     peerStderrLog = if (Test-Path $stderrLog) { $stderrLog } else { $null }
   }
   screenshotChecklist = @(
+    'peer-console-pairing.png',
     'peer-console-runtime.png',
     'peer-console-summary.png',
     'peer-console-grounded-answer.png',
     'mobile-intake.png',
-    'completed-export.png'
+    'completed-export.png',
+    'hardware-model-status.png'
   )
   failureReason = $failureReason
 }

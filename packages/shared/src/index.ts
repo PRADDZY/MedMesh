@@ -6,6 +6,7 @@ export type ScenarioPresetId =
 export type AttachmentKind = "document-photo" | "voice-note";
 export type RuntimeMode = "mock" | "live";
 export type RuntimeHealthState = "ready" | "degraded";
+export type LiveProfile = "lite" | "full";
 export type ModelRuntimeState =
   | "pending"
   | "loaded"
@@ -128,15 +129,36 @@ export interface ModelStatus {
   error?: string;
 }
 
+export interface LivePreflightStatus {
+  ok: boolean;
+  packageName: string;
+  platform: string;
+  arch: string;
+  failureCode?: string;
+  failureStage?: string;
+  error?: string;
+  resolvedPaths?: {
+    sdkPath?: string;
+    bareRuntimePath?: string;
+    platformRuntimePath?: string;
+    requireAssetPath?: string;
+    bareBinaryPath?: string;
+    customWorkerPath?: string;
+  };
+}
+
 export interface RuntimeStatus {
   requestedMode: RuntimeMode;
   effectiveMode: RuntimeMode;
   mode: RuntimeMode;
+  liveProfile: LiveProfile;
   health: RuntimeHealthState;
   providerStarted: boolean;
   providerTopic: string;
   providerPublicKey: string;
+  providerError?: string;
   liveInitError?: string;
+  preflight?: LivePreflightStatus;
   hardware: HardwareSummary;
   artifactPaths: {
     dataDir: string;

@@ -1,0 +1,18 @@
+{
+    "capturedAt":  "2026-06-03T23:41:04.8132208+05:30",
+    "computerName":  "PRATIKS-PC",
+    "osName":  "Microsoft Windows 10 Pro",
+    "osVersion":  "10.0.19045",
+    "cpuName":  "Intel(R) Core(TM) i3-1005G1 CPU @ 1.20GHz",
+    "cpuCores":  2,
+    "logicalProcessors":  4,
+    "totalMemoryGb":  3.7,
+    "gpus":  [
+                 {
+                     "name":  "Intel(R) UHD Graphics",
+                     "adapterRamGb":  1
+                 }
+             ],
+    "medmeshDeviceLabel":  null,
+    "medmeshGpuLabel":  null
+}

@@ -1,13 +1,13 @@
 # MedMesh Handoff
 
-MedMesh Handoff is a local-first mobile capture workflow for emergency and referral handoff. A field device captures structured intake, document photos, and a voice note; a nearby trusted peer laptop performs OCR, summarization, and protocol-grounded Q&A with `@qvac/sdk`.
+MedMesh Handoff is a local-first mobile capture workflow for emergency and referral handoff. An Android phone captures structured intake, document photos, and a voice note; a nearby trusted Windows laptop processes the case locally with `@qvac/sdk` and generates a grounded, non-diagnostic handoff packet.
 
 ## Why this fits QVAC
 
-- Uses `@qvac/sdk` for local OCR, transcription, completion, and provider startup in `services/peer-core`.
-- Keeps AI workloads local to the peer device and exposes a clear non-diagnostic clinical workflow.
-- Ships a protocol pack, evidence log, export artifact, and peer console for judge-facing reproducibility.
-- Supports a polished `emergency handoff` story with lighter `rural referral` and `specialist consult` presets.
+- Uses `@qvac/sdk` for live OCR, transcription, provider startup, and local model orchestration.
+- Keeps AI workloads on the approved local peer with no cloud AI APIs.
+- Ships evidence logs, exports, validation artifacts, and a peer console for reproducibility.
+- Supports the main `emergency handoff` story with `rural referral` and `specialist consult` presets.
 
 ## Workspace
 
@@ -16,7 +16,7 @@ MedMesh Handoff is a local-first mobile capture workflow for emergency and refer
 - `services/peer-core` - Node peer service with mock/live QVAC runtime, evidence logging, and export flow
 - `packages/shared` - shared contracts, presets, and disclaimers
 - `packages/protocol-pack` - bundled local protocol references used for grounding
-- `submission` - demo script, checklist, hardware proof, and disclosure notes
+- `submission` - checklist, demo script, hardware proof, submission copy, and frozen assets
 
 ## Quick start
 
@@ -27,29 +27,54 @@ pnpm --filter @medmesh/peer-ui dev
 pnpm --filter @medmesh/mobile start
 ```
 
-Default peer-core mode is `mock`, which keeps the demo runnable without downloading large models. For a live QVAC setup, copy `services/peer-core/.env.example` to `services/peer-core/.env` only if you want to override the default live model sources.
+Default mode is `mock`, which keeps the product runnable without model downloads.
 
 ## Live QVAC mode
 
-The fastest live path is:
+The current approved single-machine path is the `lite` live profile:
+
+- live `Whisper` transcription
+- live `OCR` extraction
+- deterministic local summary and grounded answer assembly for reliability on this 4 GB Windows laptop
+
+Run:
 
 ```powershell
 $env:MEDMESH_QVAC_MODE='live'
+pnpm doctor:live
 pnpm qualify:live-host:dry
 pnpm qualify:live-host
 ```
 
-By default, MedMesh now uses pinned official live sources:
+Current approved artifact on this laptop:
 
-- `MedPsy 1.7B Q4_K_M` from `qvac/MedPsy-1.7B-GGUF`
-- `WHISPER_TINY` plus `VAD_SILERO_5_1_2`
-- `OCR_LATIN_RECOGNIZER_1`
-- embeddings are skipped unless you explicitly configure `MEDMESH_EMBED_MODEL_SRC`
+- `artifacts/validation/live-host-qualification.json` -> `qualificationStatus=approved`
+- `runtime.liveProfile=lite`
 
-You can still override any model source with a local path, registry URI, or direct remote URL:
+If you later have stronger hardware, you can opt into the fuller profile:
 
 ```powershell
 $env:MEDMESH_QVAC_MODE='live'
+$env:MEDMESH_LIVE_PROFILE='full'
+pnpm qualify:live-host
+```
+
+## Model sources
+
+Default `lite` live sources:
+
+- `WHISPER_TINY`
+- `VAD_SILERO_5_1_2`
+- `OCR_LATIN_RECOGNIZER_1`
+
+Optional `full` profile additions:
+
+- `MedPsy 1.7B Q4_K_M`
+- custom embeddings if explicitly configured
+
+Override any source with a local path, registry URI, or remote URL:
+
+```powershell
 $env:MEDMESH_LLM_MODEL_SRC='C:\models\qvac\custom-medpsy.gguf'
 $env:MEDMESH_WHISPER_MODEL_SRC='C:\models\qvac\custom-whisper.bin'
 $env:MEDMESH_VAD_MODEL_SRC='C:\models\qvac\custom-vad.bin'
@@ -57,65 +82,50 @@ $env:MEDMESH_OCR_MODEL_SRC='C:\models\qvac\custom-ocr.onnx'
 $env:MEDMESH_EMBED_MODEL_SRC='C:\models\qvac\custom-embed.gguf'
 ```
 
-Optional:
+Useful env vars:
 
-- `MEDMESH_APP_URL` - LAN-accessible base URL for the mobile app
+- `MEDMESH_APP_URL` - LAN base URL for the phone
 - `MEDMESH_PROVIDER_TOPIC` - fixed QVAC topic for delegated/provider pairing
-- `MEDMESH_CTX_SIZE` and `MEDMESH_GPU_LAYERS` - tune for the demo laptop
-- `MEDMESH_DEVICE_LABEL` and `MEDMESH_GPU_LABEL` - improve the hardware manifest shown in `peer-ui`
-
-If the current Windows demo laptop struggles in live mode, start by lowering `MEDMESH_GPU_LAYERS` and `MEDMESH_CTX_SIZE` rather than changing the workflow.
+- `MEDMESH_LIVE_PROFILE` - `lite` or `full`
+- `MEDMESH_CTX_SIZE` and `MEDMESH_GPU_LAYERS` - tuning knobs for stronger hardware
+- `MEDMESH_DEVICE_LABEL` and `MEDMESH_GPU_LABEL` - better hardware labeling in `peer-ui`
 
 The service loads `.env` from the repo root and `services/peer-core/.env`, with the service-local file taking precedence.
 
-## Recommended host workflow
-
-Use a stronger nearby machine as the `approved live demo host`, then keep this current Windows laptop as the control/dev machine if needed.
-
-```powershell
-pnpm qualify:live-host:dry
-pnpm qualify:live-host
-```
-
-The dry pass writes `artifacts/validation/live-host-qualification.json` and marks the machine as either:
-
-- `candidate-live-host`
-- `approved-live-demo-host`
-- `dev-or-controller-only`
-
-For the detailed handoff checklist, see `submission/LIVE_HOST_PLAYBOOK.md`.
-
 ## Demo flow
 
-1. Run `pnpm qualify:live-host` on the borrowed live host and confirm the status is `approved-live-demo-host`.
+1. Run `pnpm qualify:live-host` and confirm `approved-live-demo-host`.
 2. Start `peer-core` and open `peer-ui`.
 3. On the phone, enter the peer URL and pairing code shown on the console.
 4. Fill the emergency handoff fields, attach one or more document photos, and record a voice note.
 5. Save locally once, then submit to peer.
-6. Watch `peer-ui` show the job stages, summary, grounded answer, and export artifact.
+6. Watch `peer-ui` show OCR, transcription, summary, grounded answer, and export generation.
 7. Download the markdown export and capture the evidence log for submission.
 
 Artifacts default to:
 
 - `artifacts/evidence` - job markdown exports plus `events.jsonl`
+- `artifacts/validation` - doctor, prewarm, health, validation, and qualification reports
 - `data/peer-core` - persisted jobs and uploaded files
+- `submission/final-assets` - frozen submission bundle copied from the latest approved run, plus screenshot placeholders and `freeze-manifest.json`
 
 ## Validation used here
 
 - `pnpm typecheck`
 - `pnpm build`
+- `pnpm doctor:live`
 - `pnpm prepare:live:dry`
+- `pnpm prepare:live`
 - `pnpm qualify:live-host:dry`
-- Mock peer-core smoke test via `powershell -ExecutionPolicy Bypass -File .\scripts\mock-smoke.ps1`
-- Live validation script via `powershell -ExecutionPolicy Bypass -File .\scripts\live-validate.ps1`
-- Hardware capture helper via `powershell -ExecutionPolicy Bypass -File .\scripts\capture-hardware.ps1`
+- `pnpm qualify:live-host`
+- `pnpm freeze:submission-assets`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\mock-smoke.ps1`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\live-validate.ps1`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\capture-hardware.ps1`
 
 ## Notes
 
-- The mobile app currently uses manual peer URL + pairing code entry. The peer console already generates a QR payload, so QR scan onboarding can be added as a narrow follow-up after live proof is stable.
-- `Build in Public` assets are intentionally not included in v1.
-- This repo keeps a strict non-diagnostic boundary throughout the UI, exports, and peer service.
-- A requested `live` run no longer silently masquerades as live if initialization fails; `/health` exposes requested mode, effective mode, model errors, and hardware metadata.
-- `pnpm prepare:live` writes `artifacts/validation/live-prewarm.json`, and `pnpm validate:live` now waits through longer first-run startup while capturing peer-core stdout/stderr logs.
-- On this current Windows host, live preflight is also honest about upstream runtime support. If `bare-runtime-win32-x64` is unavailable, MedMesh degrades to mock with an explicit blocker message instead of crashing.
-- `pnpm qualify:live-host` is the judge-facing gate for a borrowed live host; the current Windows dev machine can still be used as `dev-or-controller-only` when that gate blocks.
+- Pairing is manual URL + code entry today; the peer console already emits a QR payload for a later pass.
+- `Build in Public` assets are intentionally out of scope for v1.
+- The current approved submission path is honest about its profile: live OCR and transcription on this laptop, deterministic summary assembly for reliability, and a strict non-diagnostic boundary.
+- `full` mode is still available as an opt-in path for stronger hardware, but it is not required for the current approved submission bundle.

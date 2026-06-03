@@ -57,6 +57,9 @@ async function main() {
     path: path.join(paths.serviceRoot, ".env"),
     override: true,
   });
+  process.env.QVAC_WORKER_PATH =
+    process.env.QVAC_WORKER_PATH ??
+    path.join(paths.repoRoot, "qvac", "worker.entry.mjs");
 
   const config = loadConfig();
   const preflight = checkLiveRuntimeSupport();
@@ -67,7 +70,7 @@ async function main() {
       key: "llm",
       label: "MedPsy Reasoner",
       source: liveModelPlan.llm.source,
-      required: true,
+      required: config.liveProfile === "full",
       modelConfig: {
         ctx_size: config.ctxSize,
         gpu_layers: config.gpuLayers,
@@ -99,7 +102,7 @@ async function main() {
       key: "embeddings",
       label: "Protocol Embeddings",
       source: liveModelPlan.embeddings.source,
-      required: false,
+      required: config.liveProfile === "full",
       modelConfig: {
         batchSize: 64,
         pooling: "mean",
@@ -114,10 +117,12 @@ async function main() {
   const report = {
     capturedAt: new Date().toISOString(),
     dryRun: args.dryRun,
+    liveProfile: config.liveProfile,
     preflight,
     ctxSize: config.ctxSize,
     gpuLayers: config.gpuLayers,
     selectedModels: [] as Array<Record<string, unknown>>,
+    failureReason: null as string | null,
   };
 
   if (!preflight.ok && !args.dryRun) {
@@ -166,44 +171,62 @@ async function main() {
     console.log(`Prewarming ${target.label} from ${source}`);
     const startedAt = new Date().toISOString();
 
-    const modelId = await sdk!.loadModel({
-      modelSrc: target.source,
-      modelType: target.key,
-      modelConfig: target.modelConfig,
-      onProgress: (progress) => {
-        const event = {
-          timestamp: new Date().toISOString(),
-          progress: progress as Record<string, unknown>,
-        };
-        progressEvents.push(event);
+    try {
+      const modelId = await sdk!.loadModel({
+        modelSrc: target.source,
+        modelType: target.key,
+        modelConfig: target.modelConfig,
+        onProgress: (progress) => {
+          const event = {
+            timestamp: new Date().toISOString(),
+            progress: progress as Record<string, unknown>,
+          };
+          progressEvents.push(event);
 
-        const percent =
-          typeof progress === "object" &&
-          progress &&
-          "percent" in progress &&
-          typeof (progress as { percent?: unknown }).percent === "number"
-            ? Math.round(((progress as { percent: number }).percent) * 100)
-            : null;
+          const percent =
+            typeof progress === "object" &&
+            progress &&
+            "percent" in progress &&
+            typeof (progress as { percent?: unknown }).percent === "number"
+              ? Math.round(((progress as { percent: number }).percent) * 100)
+              : null;
 
-        if (percent !== null) {
-          console.log(`  ${target.key}: ${percent}%`);
-        }
-      },
-    });
+          if (percent !== null) {
+            console.log(`  ${target.key}: ${percent}%`);
+          }
+        },
+      });
 
-    await sdk!.unloadModel({ modelId });
+      await sdk!.unloadModel({ modelId });
 
-    report.selectedModels.push({
-      key: target.key,
-      label: target.label,
-      required: target.required,
-      status: "ready",
-      source,
-      startedAt,
-      completedAt: new Date().toISOString(),
-      modelId,
-      progressEvents,
-    });
+      report.selectedModels.push({
+        key: target.key,
+        label: target.label,
+        required: target.required,
+        status: "ready",
+        source,
+        startedAt,
+        completedAt: new Date().toISOString(),
+        modelId,
+        progressEvents,
+      });
+    } catch (error) {
+      report.failureReason =
+        error instanceof Error ? error.message : String(error);
+      report.selectedModels.push({
+        key: target.key,
+        label: target.label,
+        required: target.required,
+        status: target.required ? "failed" : "skipped",
+        source,
+        startedAt,
+        completedAt: new Date().toISOString(),
+        error: report.failureReason,
+        progressEvents,
+      });
+      fs.writeFileSync(outputPath, `${JSON.stringify(report, null, 2)}\n`);
+      throw error;
+    }
   }
 
   fs.writeFileSync(outputPath, `${JSON.stringify(report, null, 2)}\n`);

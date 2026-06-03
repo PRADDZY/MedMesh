@@ -93,8 +93,13 @@ export function describeModelSource(
 }
 
 export function buildLiveModelPlan(config: MedMeshConfig): LiveModelPlan {
+  const fullProfile = config.liveProfile === "full";
+
   return {
-    llm: resolveSource(config.llmModelSrc, createMedPsyDefaultSource()),
+    llm: resolveSource(
+      config.llmModelSrc,
+      fullProfile ? createMedPsyDefaultSource() : undefined,
+    ),
     whisper: resolveSource(config.whisperModelSrc, createWhisperTinyDefaultSource()),
     vad: resolveSource(config.vadModelSrc, createVadSileroDefaultSource()),
     ocr: resolveSource(config.ocrModelSrc, createOcrLatinDefaultSource()),

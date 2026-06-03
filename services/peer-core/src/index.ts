@@ -16,6 +16,9 @@ async function main(): Promise<void> {
     path: path.join(paths.serviceRoot, ".env"),
     override: true,
   });
+  process.env.QVAC_WORKER_PATH =
+    process.env.QVAC_WORKER_PATH ??
+    path.join(paths.repoRoot, "qvac", "worker.entry.mjs");
 
   const config = loadConfig();
   fs.mkdirSync(config.dataDir, { recursive: true });

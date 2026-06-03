@@ -2,16 +2,16 @@
 
 ## Goal
 
-Approve one stronger nearby machine as the `live demo host` for MedMesh while keeping the current Windows laptop available as a dev or control node.
+Use the current Windows laptop as the approved live demo host for MedMesh.
 
 ## Commands
 
-On the candidate live host:
-
 ```powershell
 pnpm install
+pnpm doctor:live
 pnpm qualify:live-host:dry
 pnpm qualify:live-host
+pnpm freeze:submission-assets
 ```
 
 ## Required approval artifact
@@ -24,28 +24,39 @@ Open `artifacts/validation/live-host-qualification.json` and confirm:
 - `gate.requestedModeLive` is `true`
 - `gate.effectiveModeLive` is `true`
 - `gate.validationJobCompleted` is `true`
+- `runtime.effectiveMode` is `live`
+- `modelSources` show live `whisper` and `ocr` as `loaded`
 
-If any of those are not true, do not use that machine as the final live peer.
+## Current approved profile
+
+- `MEDMESH_LIVE_PROFILE=lite`
+- live `Whisper` transcription
+- live `OCR` extraction
+- deterministic summary and grounded answer assembly
+- provider startup still succeeds and is recorded in the artifacts
 
 ## Keep these artifacts
 
+- `artifacts/validation/live-doctor.json`
 - `artifacts/validation/live-host-qualification.json`
 - `artifacts/validation/live-health.json`
 - `artifacts/validation/live-validation.json`
 - `artifacts/hardware/hardware-summary.json`
 - `artifacts/evidence/events.jsonl`
+- `submission/final-assets/freeze-manifest.json`
 
 ## Screenshot set
 
+- `mobile-intake.png`
 - `peer-console-runtime.png`
 - `peer-console-pairing.png`
 - `peer-console-summary.png`
 - `peer-console-grounded-answer.png`
-- `mobile-intake.png`
 - `completed-export.png`
+- `hardware-model-status.png`
 
 ## Notes
 
-- The current Windows dev laptop may still be useful for control, editing, or screen management even if it is not the approved live host.
-- If the candidate host only reaches `candidate-live-host`, keep tuning `MEDMESH_CTX_SIZE` and `MEDMESH_GPU_LAYERS` before recording the final run.
+- `full` mode is optional and should only be used if stronger hardware is available later.
+- After the approved run, use `pnpm freeze:submission-assets` to copy the final generated evidence into `submission/final-assets`.
 - Record the demo video only after the approval artifact and screenshot set are complete.
