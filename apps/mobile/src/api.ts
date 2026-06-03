@@ -10,6 +10,7 @@ interface HealthResponse {
   app: string;
   pairing: PairingSession;
   runtime: RuntimeStatus;
+  artifactPaths: RuntimeStatus["artifactPaths"];
 }
 
 export async function pingPeer(baseUrl: string): Promise<HealthResponse> {

@@ -103,6 +103,7 @@ export function createApiRouter({
       pairing,
       remoteApis: REMOTE_API_MANIFEST,
       jobCount: store.list().length,
+      artifactPaths: runtime.getStatus().artifactPaths,
     });
   });
 
@@ -196,6 +197,9 @@ export function createApiRouter({
           documentCount: documentPaths.length,
           hasVoiceNote: Boolean(voiceNotePath),
           pairingCode: job.pairingCode,
+          requestedMode: runtimeStatus.requestedMode,
+          effectiveMode: runtimeStatus.effectiveMode,
+          evidenceDir: runtimeStatus.artifactPaths.evidenceDir,
         },
       });
       job = {
@@ -241,14 +245,14 @@ export function createApiRouter({
       return;
     }
 
-    const answer = await runtime.answerQuestion(
+    const answerResult = await runtime.answerQuestion(
       parsed.data.question,
       job.summary,
       job.groundedAnswers[0]?.citations ?? [],
     );
     const updated = {
       ...job,
-      groundedAnswers: [...job.groundedAnswers, answer],
+      groundedAnswers: [...job.groundedAnswers, answerResult.answer],
       updatedAt: new Date().toISOString(),
     };
     store.upsert(updated);
@@ -257,7 +261,10 @@ export function createApiRouter({
       jobId: job.id,
       casePacketId: job.casePacketId,
       stage: "ground",
-      details: { question: parsed.data.question },
+      details: {
+        question: parsed.data.question,
+        ...answerResult.details,
+      },
     });
 
     response.json(updated);

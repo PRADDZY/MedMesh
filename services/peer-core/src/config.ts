@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 export interface MedMeshConfig {
@@ -14,6 +15,15 @@ export interface MedMeshConfig {
   embeddingsModelSrc?: string;
   ctxSize: number;
   gpuLayers: number;
+  deviceLabel: string;
+  gpuLabel?: string;
+  repoRoot: string;
+  serviceRoot: string;
+}
+
+interface ProjectPaths {
+  repoRoot: string;
+  serviceRoot: string;
 }
 
 function parseNumber(value: string | undefined, fallback: number): number {
@@ -25,14 +35,27 @@ function parseNumber(value: string | undefined, fallback: number): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+export function resolveProjectPaths(): ProjectPaths {
+  const srcDir = path.dirname(fileURLToPath(import.meta.url));
+  const serviceRoot = path.resolve(srcDir, "..");
+  const repoRoot = path.resolve(serviceRoot, "..", "..");
+
+  return {
+    repoRoot,
+    serviceRoot,
+  };
+}
+
 export function loadConfig(): MedMeshConfig {
-  const cwd = process.cwd();
+  const { repoRoot, serviceRoot } = resolveProjectPaths();
   const host = process.env.MEDMESH_HOST ?? "0.0.0.0";
   const port = parseNumber(process.env.MEDMESH_PORT, 4747);
   const appUrl = process.env.MEDMESH_APP_URL ?? `http://localhost:${port}`;
-  const dataDir = process.env.MEDMESH_DATA_DIR ?? path.join(cwd, "data");
+  const dataDir =
+    process.env.MEDMESH_DATA_DIR ?? path.join(repoRoot, "data", "peer-core");
   const evidenceDir =
-    process.env.MEDMESH_EVIDENCE_DIR ?? path.join(cwd, "artifacts", "evidence");
+    process.env.MEDMESH_EVIDENCE_DIR ??
+    path.join(repoRoot, "artifacts", "evidence");
 
   return {
     host,
@@ -50,5 +73,9 @@ export function loadConfig(): MedMeshConfig {
     embeddingsModelSrc: process.env.MEDMESH_EMBED_MODEL_SRC,
     ctxSize: parseNumber(process.env.MEDMESH_CTX_SIZE, 4096),
     gpuLayers: parseNumber(process.env.MEDMESH_GPU_LAYERS, 40),
+    deviceLabel: process.env.MEDMESH_DEVICE_LABEL ?? "MedMesh Peer Laptop",
+    gpuLabel: process.env.MEDMESH_GPU_LABEL,
+    repoRoot,
+    serviceRoot,
   };
 }

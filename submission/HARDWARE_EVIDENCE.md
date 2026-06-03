@@ -14,6 +14,7 @@
 - Phone model and Android version
 - Peer console with runtime mode and model status
 - Evidence export directory after a completed run
+- `artifacts/hardware/hardware-summary.json` from `scripts/capture-hardware.ps1`
 
 ## Suggested filenames
 

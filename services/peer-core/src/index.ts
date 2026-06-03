@@ -1,12 +1,22 @@
 import fs from "node:fs";
+import path from "node:path";
 
-import { loadConfig } from "./config.js";
+import dotenv from "dotenv";
+
+import { loadConfig, resolveProjectPaths } from "./config.js";
 import { EvidenceLog } from "./lib/evidence-log.js";
 import { JobStore } from "./lib/job-store.js";
 import { QvacRuntime } from "./lib/qvac-runtime.js";
 import { createServer } from "./server.js";
 
 async function main(): Promise<void> {
+  const paths = resolveProjectPaths();
+  dotenv.config({ path: path.join(paths.repoRoot, ".env") });
+  dotenv.config({
+    path: path.join(paths.serviceRoot, ".env"),
+    override: true,
+  });
+
   const config = loadConfig();
   fs.mkdirSync(config.dataDir, { recursive: true });
   fs.mkdirSync(config.evidenceDir, { recursive: true });

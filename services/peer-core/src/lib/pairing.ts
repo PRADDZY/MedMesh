@@ -12,7 +12,18 @@ export function ensurePairingSession(
   fs.mkdirSync(dataDir, { recursive: true });
 
   if (fs.existsSync(pairingPath)) {
-    return JSON.parse(fs.readFileSync(pairingPath, "utf8")) as PairingSession;
+    const cached = JSON.parse(
+      fs.readFileSync(pairingPath, "utf8"),
+    ) as PairingSession;
+    if (
+      cached.topic === runtime.providerTopic &&
+      cached.providerPublicKey ===
+        (runtime.providerPublicKey || "mock-provider-public-key-medmesh") &&
+      cached.baseUrl === baseUrl &&
+      cached.providerMode === runtime.effectiveMode
+    ) {
+      return cached;
+    }
   }
 
   const generatedAt = new Date().toISOString();
@@ -21,7 +32,7 @@ export function ensurePairingSession(
     topic: runtime.providerTopic,
     providerPublicKey:
       runtime.providerPublicKey || "mock-provider-public-key-medmesh",
-    providerMode: runtime.mode,
+    providerMode: runtime.effectiveMode,
     baseUrl,
     generatedAt,
     expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(),

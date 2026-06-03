@@ -5,12 +5,15 @@
   "packageManager": "pnpm@10.10.0",
   "scripts": {
     "build": "pnpm -r --if-present build",
+    "capture:hardware": "powershell -ExecutionPolicy Bypass -File .\\scripts\\capture-hardware.ps1",
     "dev:peer-ui": "pnpm --filter @medmesh/peer-ui dev",
     "dev:peer-core": "pnpm --filter @medmesh/peer-core dev",
     "dev:mobile": "pnpm --filter @medmesh/mobile start",
     "lint": "pnpm -r --if-present lint",
     "test": "pnpm -r --if-present test",
-    "typecheck": "pnpm -r --if-present typecheck"
+    "typecheck": "pnpm -r --if-present typecheck",
+    "validate:live": "powershell -ExecutionPolicy Bypass -File .\\scripts\\live-validate.ps1",
+    "validate:mock": "powershell -ExecutionPolicy Bypass -File .\\scripts\\mock-smoke.ps1"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

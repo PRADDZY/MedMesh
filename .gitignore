@@ -8,6 +8,9 @@ coverage/
 package-lock.json
 yarn.lock
 *.log
+.env
+.env.local
+services/peer-core/.env
 artifacts/
 data/
 apps/mobile/.claude/

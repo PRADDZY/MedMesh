@@ -1,8 +1,13 @@
+import os from "node:os";
+import path from "node:path";
+
 import {
   NON_DIAGNOSTIC_DISCLAIMER,
   type CasePacket,
   type GroundedAnswer,
+  type HardwareSummary,
   type HandoffSummary,
+  type ModelStatus,
   type ProtocolCitation,
   type RuntimeStatus,
 } from "@medmesh/shared";
@@ -10,12 +15,40 @@ import {
 import type { MedMeshConfig } from "../config.js";
 
 type QvacSdkModule = typeof import("@qvac/sdk");
+type ModelType = ModelStatus["modelType"];
 
 interface SummaryInput {
   packet: CasePacket;
   ocrText: string[];
   transcript: string;
   citations: ProtocolCitation[];
+}
+
+interface OcrExtractionResult {
+  texts: string[];
+  details: Record<string, unknown>;
+}
+
+interface TranscriptResult {
+  text: string;
+  details: Record<string, unknown>;
+}
+
+interface SummaryResult {
+  summary: HandoffSummary;
+  details: Record<string, unknown>;
+}
+
+interface AnswerResult {
+  answer: GroundedAnswer;
+  details: Record<string, unknown>;
+}
+
+interface ModelLoadConfig {
+  modelType: ModelType;
+  label: string;
+  modelSrc?: string;
+  modelConfig?: Record<string, unknown>;
 }
 
 export class QvacRuntime {
@@ -27,160 +60,244 @@ export class QvacRuntime {
   private embeddingsModelId?: string;
 
   constructor(private readonly config: MedMeshConfig) {
+    const requestedMode = config.qvacMode;
+    const hardware = this.buildHardwareSummary();
+
     this.runtimeStatus = {
-      mode: config.qvacMode,
+      requestedMode,
+      effectiveMode: "mock",
+      mode: "mock",
+      health: requestedMode === "mock" ? "ready" : "degraded",
       providerStarted: false,
       providerTopic: config.providerTopic,
       providerPublicKey: "",
+      hardware,
+      artifactPaths: {
+        dataDir: config.dataDir,
+        evidenceDir: config.evidenceDir,
+      },
       models: [
-        {
-          name: "MedPsy Reasoner",
-          modelType: "llm",
-          source: config.llmModelSrc,
-          loaded: false,
-          delegated: false,
-        },
-        {
-          name: "Whisper Transcriber",
-          modelType: "whisper",
-          source: config.whisperModelSrc,
-          loaded: false,
-          delegated: false,
-        },
-        {
-          name: "OCR Extractor",
-          modelType: "ocr",
-          source: config.ocrModelSrc,
-          loaded: false,
-          delegated: false,
-        },
-        {
-          name: "Protocol Embeddings",
-          modelType: "embeddings",
-          source: config.embeddingsModelSrc,
-          loaded: false,
-          delegated: false,
-        },
+        this.createModelStatus("llm", "MedPsy Reasoner", config.llmModelSrc, true),
+        this.createModelStatus(
+          "whisper",
+          "Whisper Transcriber",
+          config.whisperModelSrc,
+          true,
+        ),
+        this.createModelStatus("ocr", "OCR Extractor", config.ocrModelSrc, true),
+        this.createModelStatus(
+          "embeddings",
+          "Protocol Embeddings",
+          config.embeddingsModelSrc,
+          false,
+        ),
       ],
     };
   }
 
   async init(): Promise<void> {
-    if (this.config.qvacMode !== "live") {
+    if (this.runtimeStatus.requestedMode === "mock") {
+      this.runtimeStatus.models = this.runtimeStatus.models.map((model) => ({
+        ...model,
+        status: "mocked",
+        loaded: false,
+        error: undefined,
+      }));
       return;
     }
 
+    const initErrors: string[] = [];
+
     try {
       this.sdk = await import("@qvac/sdk");
+    } catch (error) {
+      this.applyLiveFallback(
+        `Could not import @qvac/sdk: ${this.normalizeError(error)}`,
+      );
+      return;
+    }
 
-      if (this.config.llmModelSrc) {
-        this.llmModelId = await this.sdk.loadModel({
-          modelSrc: this.config.llmModelSrc,
-          modelType: "llm",
-          modelConfig: {
-            ctx_size: this.config.ctxSize,
-            gpu_layers: this.config.gpuLayers,
-          },
-        });
-        this.setModelLoaded("llm", true);
-      }
+    this.llmModelId = await this.loadModel({
+      modelType: "llm",
+      label: "MedPsy Reasoner",
+      modelSrc: this.config.llmModelSrc,
+      modelConfig: {
+        ctx_size: this.config.ctxSize,
+        gpu_layers: this.config.gpuLayers,
+      },
+    }, initErrors);
 
-      if (this.config.whisperModelSrc) {
-        this.whisperModelId = await this.sdk.loadModel({
-          modelSrc: this.config.whisperModelSrc,
-          modelType: "whisper",
-          modelConfig: {
-            language: "en",
-            strategy: "greedy",
-          },
-        });
-        this.setModelLoaded("whisper", true);
-      }
+    this.whisperModelId = await this.loadModel(
+      {
+        modelType: "whisper",
+        label: "Whisper Transcriber",
+        modelSrc: this.config.whisperModelSrc,
+        modelConfig: {
+          language: "en",
+          strategy: "greedy",
+        },
+      },
+      initErrors,
+    );
 
-      if (this.config.ocrModelSrc) {
-        this.ocrModelId = await this.sdk.loadModel({
-          modelSrc: this.config.ocrModelSrc,
-          modelType: "ocr",
-          modelConfig: {
-            langList: ["en"],
-            pipelineMode: "easyocr",
-            contrastRetry: true,
-          },
-        });
-        this.setModelLoaded("ocr", true);
-      }
+    this.ocrModelId = await this.loadModel(
+      {
+        modelType: "ocr",
+        label: "OCR Extractor",
+        modelSrc: this.config.ocrModelSrc,
+        modelConfig: {
+          langList: ["en"],
+          pipelineMode: "easyocr",
+          contrastRetry: true,
+        },
+      },
+      initErrors,
+    );
 
-      if (this.config.embeddingsModelSrc) {
-        this.embeddingsModelId = await this.sdk.loadModel({
-          modelSrc: this.config.embeddingsModelSrc,
-          modelType: "embeddings",
-          modelConfig: {
-            batchSize: 64,
-            pooling: "mean",
-          },
-        });
-        this.setModelLoaded("embeddings", true);
-      }
+    this.embeddingsModelId = await this.loadModel(
+      {
+        modelType: "embeddings",
+        label: "Protocol Embeddings",
+        modelSrc: this.config.embeddingsModelSrc,
+        modelConfig: {
+          batchSize: 64,
+          pooling: "mean",
+        },
+      },
+      initErrors,
+    );
 
-      if (this.llmModelId) {
+    if (initErrors.length === 0 && this.llmModelId && this.sdk) {
+      try {
         const provider = await this.sdk.startQVACProvider({
           topic: this.config.providerTopic,
         });
         this.runtimeStatus.providerStarted = true;
         this.runtimeStatus.providerPublicKey = provider.publicKey;
+      } catch (error) {
+        initErrors.push(
+          `Provider start failed: ${this.normalizeError(error)}`,
+        );
       }
-    } catch (error) {
-      console.warn("QVAC live mode failed, falling back to mock mode.", error);
-      this.runtimeStatus.mode = "mock";
-      this.runtimeStatus.providerStarted = false;
-      this.runtimeStatus.providerPublicKey = "";
     }
+
+    if (initErrors.length > 0) {
+      this.applyLiveFallback(initErrors.join(" | "));
+      return;
+    }
+
+    this.runtimeStatus.effectiveMode = "live";
+    this.runtimeStatus.mode = "live";
+    this.runtimeStatus.health = "ready";
+    this.runtimeStatus.liveInitError = undefined;
   }
 
   getStatus(): RuntimeStatus {
     return structuredClone(this.runtimeStatus);
   }
 
-  async extractOcrText(imagePaths: string[]): Promise<string[]> {
-    if (this.runtimeStatus.mode === "live" && this.sdk && this.ocrModelId) {
-      const results: string[] = [];
+  async extractOcrData(imagePaths: string[]): Promise<OcrExtractionResult> {
+    if (!imagePaths.length) {
+      return {
+        texts: [],
+        details: {
+          mode: this.runtimeStatus.effectiveMode,
+          imageCount: 0,
+          ocrStats: [],
+        },
+      };
+    }
+
+    if (this.canUseLiveMode() && this.sdk && this.ocrModelId) {
+      const texts: string[] = [];
+      const ocrStats: Array<Record<string, unknown>> = [];
 
       for (const imagePath of imagePaths) {
-        const { blocks } = this.sdk.ocr({
+        const response = this.sdk.ocr({
           modelId: this.ocrModelId,
           image: imagePath,
-        });
-        const resolved = await blocks;
-        results.push(
-          resolved
-            .map((block: { text?: string }) => block.text)
+        }) as {
+          blocks: Promise<Array<{ text?: string }>>;
+          stats?: Promise<Record<string, unknown> | undefined>;
+        };
+
+        const [blocks, stats] = await Promise.all([
+          response.blocks,
+          response.stats ?? Promise.resolve(undefined),
+        ]);
+
+        texts.push(
+          blocks
+            .map((block) => block.text)
             .filter(Boolean)
             .join(" "),
         );
+        ocrStats.push({
+          fileName: path.basename(imagePath),
+          stats: stats ?? null,
+        });
       }
 
-      return results;
+      return {
+        texts,
+        details: {
+          mode: "live",
+          imageCount: imagePaths.length,
+          ocrStats,
+        },
+      };
     }
 
-    return imagePaths.map((imagePath, index) => {
-      const label = imagePath.split(/[\\/]/).pop() ?? `document-${index + 1}`;
-      return `Mock OCR extracted from ${label}: handwritten meds list, referral note, and vitals snapshot.`;
-    });
+    return {
+      texts: imagePaths.map((imagePath, index) => {
+        const label = imagePath.split(/[\\/]/).pop() ?? `document-${index + 1}`;
+        return `Mock OCR extracted from ${label}: handwritten meds list, referral note, and vitals snapshot.`;
+      }),
+      details: {
+        mode: "mock",
+        imageCount: imagePaths.length,
+        ocrStats: [],
+      },
+    };
   }
 
-  async transcribeAudio(audioPath?: string): Promise<string> {
+  async transcribeAudioData(audioPath?: string): Promise<TranscriptResult> {
     if (!audioPath) {
-      return "";
+      return {
+        text: "",
+        details: {
+          mode: this.runtimeStatus.effectiveMode,
+          hasAudio: false,
+        },
+      };
     }
 
-    if (this.runtimeStatus.mode === "live" && this.sdk && this.whisperModelId) {
-      return this.sdk.transcribe({
+    if (this.canUseLiveMode() && this.sdk && this.whisperModelId) {
+      const transcript = await this.sdk.transcribe({
         modelId: this.whisperModelId,
         audioChunk: audioPath,
       });
+
+      return {
+        text: transcript,
+        details: {
+          mode: "live",
+          hasAudio: true,
+          fileName: path.basename(audioPath),
+          transcriptionStats: null,
+        },
+      };
     }
 
-    return "Mock voice note: patient transported after acute shortness of breath, anxiety, and repeated confusion. Oxygen started, vitals partially improved, receiving team should reassess airway, SpO2 trend, and medication history.";
+    return {
+      text: "Mock voice note: patient transported after acute shortness of breath, anxiety, and repeated confusion. Oxygen started, vitals partially improved, receiving team should reassess airway, SpO2 trend, and medication history.",
+      details: {
+        mode: "mock",
+        hasAudio: true,
+        fileName: path.basename(audioPath),
+        transcriptionStats: [],
+      },
+    };
   }
 
   async summarizeCase({
@@ -188,8 +305,8 @@ export class QvacRuntime {
     ocrText,
     transcript,
     citations,
-  }: SummaryInput): Promise<HandoffSummary> {
-    if (this.runtimeStatus.mode === "live" && this.sdk && this.llmModelId) {
+  }: SummaryInput): Promise<SummaryResult> {
+    if (this.canUseLiveMode() && this.sdk && this.llmModelId) {
       const prompt = [
         "Return strict JSON for a clinical handoff summary.",
         "Fields: overview, presentingSituation, keyFindings, interventionsCompleted, unresolvedRisks, protocolChecklist, behavioralHealthConsiderations, recommendedHandoffOrder, caution.",
@@ -205,22 +322,49 @@ export class QvacRuntime {
         history: [{ role: "user", content: prompt }],
       });
 
-      const rawText = await result.text;
+      const [rawText, stats] = await Promise.all([result.text, result.stats]);
       const parsed = this.tryParseSummary(rawText);
+
       if (parsed) {
-        return parsed;
+        return {
+          summary: parsed,
+          details: {
+            mode: "live",
+            parsedJson: true,
+            completionStats: stats ?? null,
+            citationCount: citations.length,
+          },
+        };
       }
+
+      return {
+        summary: this.buildMockSummary({ packet, ocrText, transcript, citations }),
+        details: {
+          mode: "live",
+          parsedJson: false,
+          completionStats: stats ?? null,
+          citationCount: citations.length,
+          rawPreview: rawText.slice(0, 240),
+        },
+      };
     }
 
-    return this.buildMockSummary({ packet, ocrText, transcript, citations });
+    return {
+      summary: this.buildMockSummary({ packet, ocrText, transcript, citations }),
+      details: {
+        mode: "mock",
+        parsedJson: false,
+        citationCount: citations.length,
+      },
+    };
   }
 
   async answerQuestion(
     question: string,
     summary: HandoffSummary,
     citations: ProtocolCitation[],
-  ): Promise<GroundedAnswer> {
-    if (this.runtimeStatus.mode === "live" && this.sdk && this.llmModelId) {
+  ): Promise<AnswerResult> {
+    if (this.canUseLiveMode() && this.sdk && this.llmModelId) {
       const prompt = [
         "Answer the question using only the provided protocol snippets and handoff summary.",
         "Keep it non-diagnostic and say when the source support is thin.",
@@ -233,13 +377,22 @@ export class QvacRuntime {
         modelId: this.llmModelId,
         history: [{ role: "user", content: prompt }],
       });
+      const [text, stats] = await Promise.all([result.text, result.stats]);
 
       return {
-        question,
-        answer: await result.text,
-        grounded: citations.length > 0,
-        disclaimer: NON_DIAGNOSTIC_DISCLAIMER,
-        citations,
+        answer: {
+          question,
+          answer: text,
+          grounded: citations.length > 0,
+          disclaimer: NON_DIAGNOSTIC_DISCLAIMER,
+          citations,
+        },
+        details: {
+          mode: "live",
+          grounded: citations.length > 0,
+          completionStats: stats ?? null,
+          citationCount: citations.length,
+        },
       };
     }
 
@@ -249,25 +402,147 @@ export class QvacRuntime {
       : "No protocol snippet matched strongly enough. Reconfirm the basics: identity, situation, vitals trend, interventions already performed, and what the receiving clinician should verify first.";
 
     return {
-      question,
-      answer,
-      grounded: citations.length > 0,
-      disclaimer: NON_DIAGNOSTIC_DISCLAIMER,
-      citations,
+      answer: {
+        question,
+        answer,
+        grounded: citations.length > 0,
+        disclaimer: NON_DIAGNOSTIC_DISCLAIMER,
+        citations,
+      },
+      details: {
+        mode: "mock",
+        grounded: citations.length > 0,
+        citationCount: citations.length,
+      },
     };
   }
 
-  private setModelLoaded(
-    modelType: RuntimeStatus["models"][number]["modelType"],
-    loaded: boolean,
-  ): void {
-    const model = this.runtimeStatus.models.find(
-      (entry) => entry.modelType === modelType,
-    );
+  private buildHardwareSummary(): HardwareSummary {
+    const cpuModels = os
+      .cpus()
+      .map((cpu) => cpu.model.trim())
+      .filter(Boolean);
 
-    if (model) {
-      model.loaded = loaded;
+    return {
+      deviceLabel: this.config.deviceLabel,
+      platform: os.platform(),
+      release: os.release(),
+      arch: os.arch(),
+      cpuModel: cpuModels[0] ?? "Unknown CPU",
+      cpuCores: os.cpus().length,
+      totalMemoryGb: Math.round((os.totalmem() / 1024 ** 3) * 10) / 10,
+      gpuLabel: this.config.gpuLabel,
+      collectedAt: new Date().toISOString(),
+    };
+  }
+
+  private createModelStatus(
+    modelType: ModelType,
+    name: string,
+    source: string | undefined,
+    required: boolean,
+  ): ModelStatus {
+    return {
+      name,
+      modelType,
+      source,
+      required,
+      status: this.config.qvacMode === "mock" ? "mocked" : "pending",
+      loaded: false,
+      delegated: false,
+    };
+  }
+
+  private async loadModel(
+    model: ModelLoadConfig,
+    initErrors: string[],
+  ): Promise<string | undefined> {
+    const current = this.getModelStatus(model.modelType);
+    if (!this.sdk || !current) {
+      return undefined;
     }
+
+    if (!model.modelSrc) {
+      if (current.required) {
+        const message = `${model.label} source is not configured`;
+        initErrors.push(message);
+        this.patchModelStatus(model.modelType, {
+          status: "failed",
+          error: message,
+        });
+      } else {
+        this.patchModelStatus(model.modelType, {
+          status: "skipped",
+          error: "Optional model not configured",
+        });
+      }
+      return undefined;
+    }
+
+    try {
+      const modelId = await this.sdk.loadModel({
+        modelSrc: model.modelSrc,
+        modelType: model.modelType,
+        modelConfig: model.modelConfig,
+      });
+
+      this.patchModelStatus(model.modelType, {
+        status: "loaded",
+        loaded: true,
+        error: undefined,
+        modelId,
+      });
+      return modelId;
+    } catch (error) {
+      const message = `${model.label} failed: ${this.normalizeError(error)}`;
+      this.patchModelStatus(model.modelType, {
+        status: "failed",
+        error: message,
+      });
+      if (current.required) {
+        initErrors.push(message);
+      }
+      return undefined;
+    }
+  }
+
+  private getModelStatus(modelType: ModelType): ModelStatus | undefined {
+    return this.runtimeStatus.models.find((model) => model.modelType === modelType);
+  }
+
+  private patchModelStatus(
+    modelType: ModelType,
+    patch: Partial<ModelStatus>,
+  ): void {
+    this.runtimeStatus.models = this.runtimeStatus.models.map((model) =>
+      model.modelType === modelType
+        ? {
+            ...model,
+            ...patch,
+          }
+        : model,
+    );
+  }
+
+  private applyLiveFallback(message: string): void {
+    this.runtimeStatus.effectiveMode = "mock";
+    this.runtimeStatus.mode = "mock";
+    this.runtimeStatus.health = "degraded";
+    this.runtimeStatus.providerStarted = false;
+    this.runtimeStatus.providerPublicKey = "";
+    this.runtimeStatus.liveInitError = message;
+  }
+
+  private canUseLiveMode(): boolean {
+    return this.runtimeStatus.effectiveMode === "live";
+  }
+
+  private normalizeError(error: unknown): string {
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    return String(error);
   }
 
   private tryParseSummary(rawText: string): HandoffSummary | null {

@@ -17,6 +17,7 @@ interface HealthPayload {
   pairing: PairingSession;
   runtime: RuntimeStatus;
   jobCount: number;
+  artifactPaths: RuntimeStatus["artifactPaths"];
 }
 
 function formatTime(value?: string): string {
@@ -25,6 +26,18 @@ function formatTime(value?: string): string {
   }
 
   return new Date(value).toLocaleString();
+}
+
+function getModelBadgeClass(status: RuntimeStatus["models"][number]["status"]): string {
+  if (status === "loaded") {
+    return "badge live";
+  }
+
+  if (status === "failed") {
+    return "badge failed";
+  }
+
+  return "badge idle";
 }
 
 function App() {
@@ -85,31 +98,37 @@ function App() {
           <p className="eyebrow">MedMesh Peer Console</p>
           <h1>Nearby compute for offline clinical handoff</h1>
           <p className="lede">
-            This console shows pair-up state, QVAC runtime mode, evidence logs,
-            and every case job flowing in from the field capture app.
+            This console shows pairing state, requested versus effective QVAC
+            runtime, evidence outputs, and every case job flowing in from the
+            field capture app.
           </p>
         </div>
         <div className="hero-stat-grid">
           <div className="stat-card">
-            <span>Runtime</span>
-            <strong>{health?.runtime.mode ?? "loading"}</strong>
+            <span>Effective runtime</span>
+            <strong>{health?.runtime.effectiveMode ?? "loading"}</strong>
           </div>
           <div className="stat-card">
-            <span>Provider topic</span>
-            <strong>{health?.runtime.providerTopic.slice(0, 10) ?? "—"}…</strong>
+            <span>Requested mode</span>
+            <strong>{health?.runtime.requestedMode ?? "—"}</strong>
           </div>
           <div className="stat-card">
             <span>Jobs seen</span>
             <strong>{health?.jobCount ?? 0}</strong>
           </div>
           <div className="stat-card">
-            <span>Guardrail</span>
-            <strong>Non-diagnostic</strong>
+            <span>Health</span>
+            <strong>{health?.runtime.health ?? "—"}</strong>
           </div>
         </div>
       </section>
 
       {error ? <div className="alert">{error}</div> : null}
+      {health?.runtime.liveInitError ? (
+        <div className="alert">
+          Live init degraded to mock: {health.runtime.liveInitError}
+        </div>
+      ) : null}
 
       <section className="grid">
         <article className="panel">
@@ -140,8 +159,12 @@ function App() {
                   <code>{health.pairing.baseUrl}</code>
                 </div>
                 <div>
-                  <span className="label">Public key</span>
+                  <span className="label">Provider key</span>
                   <code>{health.pairing.providerPublicKey || "mock provider"}</code>
+                </div>
+                <div>
+                  <span className="label">Evidence dir</span>
+                  <code>{health.artifactPaths.evidenceDir}</code>
                 </div>
               </div>
             </div>
@@ -158,14 +181,28 @@ function App() {
             </div>
           </header>
           <div className="model-list">
+            <div className="model-row">
+              <div>
+                <strong>{health?.runtime.hardware.deviceLabel ?? "Peer hardware"}</strong>
+                <p>
+                  {health?.runtime.hardware.cpuModel ?? "Unknown CPU"} ·{" "}
+                  {health?.runtime.hardware.cpuCores ?? 0} cores ·{" "}
+                  {health?.runtime.hardware.totalMemoryGb ?? 0} GB RAM
+                </p>
+              </div>
+              <span className="badge idle">
+                {health?.runtime.hardware.gpuLabel ?? "GPU env optional"}
+              </span>
+            </div>
             {health?.runtime.models.map((model) => (
               <div className="model-row" key={model.name}>
                 <div>
                   <strong>{model.name}</strong>
                   <p>{model.source || "Env var not set yet"}</p>
+                  {model.error ? <p>{model.error}</p> : null}
                 </div>
-                <span className={model.loaded ? "badge live" : "badge idle"}>
-                  {model.loaded ? "loaded" : health.runtime.mode === "mock" ? "mocked" : "idle"}
+                <span className={getModelBadgeClass(model.status)}>
+                  {model.status}
                 </span>
               </div>
             )) ?? <p>No model status yet.</p>}

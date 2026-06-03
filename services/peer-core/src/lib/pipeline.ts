@@ -27,6 +27,12 @@ interface PipelineContext {
   evidenceDir: string;
 }
 
+interface StageOutcome<T> {
+  value: T;
+  details?: Record<string, unknown>;
+  note?: string;
+}
+
 function updateStage(
   job: AnalysisJob,
   stageName: AnalysisStageName,
@@ -75,7 +81,7 @@ function createExportMarkdown(job: AnalysisJob): string {
     )
     .join("\n");
 
-  return `# MedMesh Handoff Export\n\n## Job\n- Job ID: ${job.id}\n- Case Packet: ${job.casePacketId}\n- Status: ${job.status}\n- Pairing Code: ${job.pairingCode}\n\n## Summary\n- Overview: ${summary?.overview ?? "Pending"}\n- Situation: ${summary?.presentingSituation ?? "Pending"}\n- Key Findings: ${(summary?.keyFindings ?? []).join("; ")}\n- Unresolved Risks: ${(summary?.unresolvedRisks ?? []).join("; ")}\n\n## Protocol-grounded Q&A\n${answers || "- None yet"}\n\n## Stage timings\n${stages}\n\n## Disclaimer\n${NON_DIAGNOSTIC_DISCLAIMER}\n`;
+  return `# MedMesh Handoff Export\n\n## Job\n- Job ID: ${job.id}\n- Case Packet: ${job.casePacketId}\n- Status: ${job.status}\n- Pairing Code: ${job.pairingCode}\n- Requested Mode: ${job.runtime.requestedMode}\n- Effective Mode: ${job.runtime.effectiveMode}\n- Peer Device: ${job.runtime.hardware.deviceLabel}\n- CPU: ${job.runtime.hardware.cpuModel} (${job.runtime.hardware.cpuCores} cores)\n- Memory: ${job.runtime.hardware.totalMemoryGb} GB\n\n## Summary\n- Overview: ${summary?.overview ?? "Pending"}\n- Situation: ${summary?.presentingSituation ?? "Pending"}\n- Key Findings: ${(summary?.keyFindings ?? []).join("; ")}\n- Unresolved Risks: ${(summary?.unresolvedRisks ?? []).join("; ")}\n\n## Protocol-grounded Q&A\n${answers || "- None yet"}\n\n## Stage timings\n${stages}\n\n## Disclaimer\n${NON_DIAGNOSTIC_DISCLAIMER}\n`;
 }
 
 export async function runAnalysisJob(
@@ -85,31 +91,46 @@ export async function runAnalysisJob(
   files: UploadedFiles,
 ): Promise<void> {
   try {
-    job = persistJob(
-      context.store,
-      {
-        ...job,
-        status: "running",
-        updatedAt: new Date().toISOString(),
-      },
-    );
+    job = persistJob(context.store, {
+      ...job,
+      status: "running",
+      updatedAt: new Date().toISOString(),
+    });
 
     const ocrText = await runStage(
       context,
       job,
       "ocr",
-      async () => context.runtime.extractOcrText(files.documentPaths),
+      async () => {
+        const result = await context.runtime.extractOcrData(files.documentPaths);
+        return {
+          value: result.texts,
+          details: result.details,
+        };
+      },
       files.documentPaths.length > 0
         ? `Processed ${files.documentPaths.length} documents`
         : "No document photos attached",
     );
-    job = persistJob(context.store, { ...job, ocrText, updatedAt: new Date().toISOString() });
+    job = persistJob(context.store, {
+      ...job,
+      ocrText,
+      updatedAt: new Date().toISOString(),
+    });
 
     const transcript = await runStage(
       context,
       job,
       "transcribe",
-      async () => context.runtime.transcribeAudio(files.voiceNotePath),
+      async () => {
+        const result = await context.runtime.transcribeAudioData(
+          files.voiceNotePath,
+        );
+        return {
+          value: result.text,
+          details: result.details,
+        };
+      },
       files.voiceNotePath ? "Voice note captured" : "No voice note attached",
     );
     job = persistJob(context.store, {
@@ -122,11 +143,15 @@ export async function runAnalysisJob(
       context,
       job,
       "normalize",
-      async () =>
-        searchProtocolDocuments(
+      async () => ({
+        value: searchProtocolDocuments(
           buildProtocolQuery(packet.structuredIntake, transcript, ocrText),
           3,
         ),
+        details: {
+          mode: context.runtime.getStatus().effectiveMode,
+        },
+      }),
       "Prepared protocol search context",
     );
 
@@ -134,16 +159,20 @@ export async function runAnalysisJob(
       context,
       job,
       "summarize",
-      async () =>
-        context.runtime.summarizeCase({
+      async () => {
+        const result = await context.runtime.summarizeCase({
           packet,
           ocrText,
           transcript,
           citations,
-        }),
+        });
+        return {
+          value: result.summary,
+          details: result.details,
+        };
+      },
       "Built structured handoff summary",
     );
-
     job = persistJob(context.store, {
       ...job,
       summary,
@@ -155,8 +184,17 @@ export async function runAnalysisJob(
       context,
       job,
       "ground",
-      async () =>
-        context.runtime.answerQuestion(defaultQuestion, summary, citations),
+      async () => {
+        const result = await context.runtime.answerQuestion(
+          defaultQuestion,
+          summary,
+          citations,
+        );
+        return {
+          value: result.answer,
+          details: result.details,
+        };
+      },
       "Generated first grounded follow-up answer",
     );
 
@@ -176,6 +214,7 @@ export async function runAnalysisJob(
       details: {
         exportPath,
         qnaCount: groundedAnswers.length,
+        effectiveMode: job.runtime.effectiveMode,
       },
     });
 
@@ -209,7 +248,7 @@ async function runStage<T>(
   context: PipelineContext,
   job: AnalysisJob,
   stageName: AnalysisStageName,
-  action: () => Promise<T>,
+  action: () => Promise<StageOutcome<T>>,
   note: string,
 ): Promise<T> {
   const startedAt = new Date().toISOString();
@@ -227,11 +266,12 @@ async function runStage<T>(
   try {
     const result = await action();
     const durationMs = Math.round(performance.now() - timer);
+    const stageNote = result.note ?? note;
     startedJob = updateStage(
       startedJob,
       stageName,
       "completed",
-      note,
+      stageNote,
       startedAt,
       durationMs,
     );
@@ -242,11 +282,12 @@ async function runStage<T>(
       casePacketId: job.casePacketId,
       stage: stageName,
       details: {
-        note,
+        note: stageNote,
         durationMs,
+        ...(result.details ?? {}),
       },
     });
-    return result;
+    return result.value;
   } catch (error) {
     const durationMs = Math.round(performance.now() - timer);
     const message = error instanceof Error ? error.message : "Unknown error";

@@ -4,6 +4,14 @@ export type ScenarioPresetId =
   | "specialist-consult";
 
 export type AttachmentKind = "document-photo" | "voice-note";
+export type RuntimeMode = "mock" | "live";
+export type RuntimeHealthState = "ready" | "degraded";
+export type ModelRuntimeState =
+  | "pending"
+  | "loaded"
+  | "failed"
+  | "mocked"
+  | "skipped";
 
 export type CasePacketStatus =
   | "draft"
@@ -89,26 +97,51 @@ export interface PairingSession {
   code: string;
   topic: string;
   providerPublicKey: string;
-  providerMode: "mock" | "live";
+  providerMode: RuntimeMode;
   baseUrl: string;
   generatedAt: string;
   expiresAt: string;
   qrValue: string;
 }
 
+export interface HardwareSummary {
+  deviceLabel: string;
+  platform: string;
+  release: string;
+  arch: string;
+  cpuModel: string;
+  cpuCores: number;
+  totalMemoryGb: number;
+  gpuLabel?: string;
+  collectedAt: string;
+}
+
 export interface ModelStatus {
   name: string;
   modelType: "llm" | "whisper" | "ocr" | "embeddings";
   source?: string;
+  modelId?: string;
+  required: boolean;
+  status: ModelRuntimeState;
   loaded: boolean;
   delegated: boolean;
+  error?: string;
 }
 
 export interface RuntimeStatus {
-  mode: "mock" | "live";
+  requestedMode: RuntimeMode;
+  effectiveMode: RuntimeMode;
+  mode: RuntimeMode;
+  health: RuntimeHealthState;
   providerStarted: boolean;
   providerTopic: string;
   providerPublicKey: string;
+  liveInitError?: string;
+  hardware: HardwareSummary;
+  artifactPaths: {
+    dataDir: string;
+    evidenceDir: string;
+  };
   models: ModelStatus[];
 }
 

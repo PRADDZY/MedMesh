@@ -1,29 +1,41 @@
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$port = if ([string]::IsNullOrWhiteSpace($env:MEDMESH_PORT)) { '4767' } else { $env:MEDMESH_PORT }
+$port = if ([string]::IsNullOrWhiteSpace($env:MEDMESH_PORT)) {
+  '4768'
+} else {
+  $env:MEDMESH_PORT
+}
 $env:MEDMESH_PORT = $port
-$env:MEDMESH_APP_URL = "http://localhost:$port"
+$env:MEDMESH_APP_URL = if ([string]::IsNullOrWhiteSpace($env:MEDMESH_APP_URL)) {
+  "http://localhost:$port"
+} else {
+  $env:MEDMESH_APP_URL.TrimEnd('/')
+}
 $peerUrl = $env:MEDMESH_APP_URL
+
 $proc = $null
 $client = $null
 
 try {
   Add-Type -AssemblyName System.Net.Http
   $proc = Start-Process -FilePath 'pnpm.cmd' -ArgumentList '--filter','@medmesh/peer-core','exec','tsx','src/index.ts' -WorkingDirectory $repoRoot -WindowStyle Hidden -PassThru
-  Start-Sleep -Seconds 6
+  Start-Sleep -Seconds 8
 
   $health = Invoke-RestMethod -Uri "$peerUrl/health" -Method Get
+  if ($health.runtime.effectiveMode -ne 'live') {
+    throw "Expected effectiveMode=live but got requested=$($health.runtime.requestedMode), effective=$($health.runtime.effectiveMode), error=$($health.runtime.liveInitError)"
+  }
 
   $packet = @{
-    id = 'demo-case-1'
+    id = 'live-case-1'
     presetId = 'emergency'
     status = 'queued'
     captureDeviceLabel = 'Android handset'
     peerBaseUrl = $peerUrl
-    pairingCode = 'DEMO42'
+    pairingCode = $health.pairing.code
     structuredIntake = @{
-      patientAlias = 'PT-ALPHA'
+      patientAlias = 'PT-LIVE'
       ageBand = 'Adult'
       chiefComplaint = 'Shortness of breath and confusion'
       urgencyLevel = 'Immediate'
@@ -58,7 +70,7 @@ try {
   $job = $response.Content.ReadAsStringAsync().Result | ConvertFrom-Json
   $current = $job
 
-  for ($i = 0; $i -lt 12; $i++) {
+  for ($i = 0; $i -lt 20; $i++) {
     Start-Sleep -Seconds 1
     $current = Invoke-RestMethod -Uri "$peerUrl/api/jobs/$($job.id)" -Method Get
     if ($current.status -in @('completed', 'failed')) {
@@ -66,16 +78,32 @@ try {
     }
   }
 
-  [PSCustomObject]@{
+  if ($current.status -ne 'completed') {
+    throw "Live validation job did not complete: $($current.status)"
+  }
+
+  $outputDir = Join-Path $repoRoot 'artifacts\validation'
+  New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
+  $outputPath = Join-Path $outputDir 'live-validation.json'
+
+  $report = [PSCustomObject]@{
+    capturedAt = (Get-Date).ToString('o')
     requestedMode = $health.runtime.requestedMode
     effectiveMode = $health.runtime.effectiveMode
-    pairingCode = $health.pairing.code
+    providerTopic = $health.runtime.providerTopic
+    providerPublicKey = $health.runtime.providerPublicKey
+    deviceLabel = $health.runtime.hardware.deviceLabel
+    cpuModel = $health.runtime.hardware.cpuModel
+    totalMemoryGb = $health.runtime.hardware.totalMemoryGb
+    evidenceDir = $health.artifactPaths.evidenceDir
     jobId = $current.id
     jobStatus = $current.status
     summary = $current.summary.overview
     grounded = $current.groundedAnswers[0].answer
-    evidenceDir = $health.artifactPaths.evidenceDir
-  } | ConvertTo-Json -Depth 6
+  }
+
+  $report | ConvertTo-Json -Depth 6 | Set-Content -Path $outputPath
+  $report | ConvertTo-Json -Depth 6
 }
 finally {
   if ($client) {

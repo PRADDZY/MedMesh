@@ -43,6 +43,14 @@ function trimBaseUrl(value: string): string {
   return value.trim().replace(/\/$/, "");
 }
 
+function formatPeerStatus(health: Awaited<ReturnType<typeof pingPeer>>): string {
+  const modeSummary = `${health.runtime.requestedMode} requested / ${health.runtime.effectiveMode} effective`;
+  const issue = health.runtime.liveInitError
+    ? ` · degraded: ${health.runtime.liveInitError}`
+    : "";
+  return `${health.app} · ${modeSummary} · code ${health.pairing.code}${issue}`;
+}
+
 function App() {
   const [packet, setPacket] = useState<CasePacket>(() => createDraftCasePacket());
   const [savedPackets, setSavedPackets] = useState<CasePacket[]>([]);
@@ -88,7 +96,7 @@ function App() {
       const health = await pingPeer(trimBaseUrl(peerBaseUrl));
       const response = await fetch(`${trimBaseUrl(peerBaseUrl)}/api/jobs/${jobId}`);
       const job = (await response.json()) as AnalysisJob;
-      setPeerStatus(`${health.app} · ${health.runtime.mode} mode`);
+      setPeerStatus(formatPeerStatus(health));
       setActiveJob(job);
     } catch (error) {
       setPeerStatus(
@@ -227,7 +235,7 @@ function App() {
     setBusyLabel("Checking peer…");
     try {
       const response = await pingPeer(trimBaseUrl(peerBaseUrl));
-      setPeerStatus(`${response.app} · ${response.runtime.mode} mode · ${response.pairing.code}`);
+      setPeerStatus(formatPeerStatus(response));
       if (!pairingCode) {
         setPairingCode(response.pairing.code);
       }
