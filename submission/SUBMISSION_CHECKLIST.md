@@ -13,16 +13,18 @@
 
 ## Before submission
 
+- Run `pnpm qualify:live-host:dry` on the candidate borrowed machine and confirm `artifacts/validation/live-host-qualification.json` says `candidate-live-host` or better.
+- Run `pnpm qualify:live-host` on the borrowed machine and confirm `qualificationStatus=approved` before using it in the final demo.
 - Set `MEDMESH_APP_URL` to a real LAN URL on the demo laptop.
 - If running live, either use the pinned default QVAC sources or override them in `services/peer-core/.env`.
-- Run `pnpm prepare:live` once before the final live demo so the official models are cached.
 - Run `powershell -ExecutionPolicy Bypass -File .\scripts\mock-smoke.ps1` for a reproducible local sanity check.
-- Run `powershell -ExecutionPolicy Bypass -File .\scripts\live-validate.ps1` after live prewarm or after any custom model override.
-- Run `powershell -ExecutionPolicy Bypass -File .\scripts\capture-hardware.ps1` to save a hardware manifest under `artifacts/hardware`.
+- Keep `artifacts/validation/live-host-qualification.json`, `artifacts/validation/live-health.json`, and `artifacts/validation/live-validation.json` from the approved host.
+- Keep `artifacts/hardware/hardware-summary.json` from the approved host.
 - Capture screenshots of:
   - mobile intake screen
+  - peer console runtime status
   - peer console with pairing code
-  - completed job summary
+  - completed job summary and grounded answer
   - markdown export
   - hardware/model status
 - Record a short demo video following `submission/DEMO_SCRIPT.md`.
@@ -34,4 +36,4 @@
 - The default repo mode is `mock` so the demo stays runnable without large local models.
 - Live QVAC mode still needs a first-run model download or cache warmup, but it no longer depends on manually browsing for file paths before you can start.
 - Embeddings are not used in the current lexical protocol search path, so `MEDMESH_EMBED_MODEL_SRC` is intentionally optional.
-- This specific Windows environment currently fails QVAC live preflight because the upstream `bare-runtime-win32-x64` package is missing; MedMesh now reports that blocker cleanly instead of crashing.
+- This specific Windows dev environment currently fails QVAC live preflight because the upstream `bare-runtime-win32-x64` package is missing; it should be treated as `dev-or-controller-only` unless the qualification artifact changes.

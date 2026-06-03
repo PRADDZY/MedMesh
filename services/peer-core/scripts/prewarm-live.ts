@@ -121,6 +121,13 @@ async function main() {
   };
 
   if (!preflight.ok && !args.dryRun) {
+    report.selectedModels = targets.map((target) => ({
+      key: target.key,
+      label: target.label,
+      required: target.required,
+      status: target.required ? "blocked" : "skipped",
+      source: describeModelSource(target.source) ?? null,
+    }));
     fs.writeFileSync(outputPath, `${JSON.stringify(report, null, 2)}\n`);
     throw new Error(preflight.error ?? "QVAC live preflight failed");
   }

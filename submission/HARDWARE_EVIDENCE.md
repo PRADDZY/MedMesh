@@ -15,6 +15,7 @@
 - Peer console with runtime mode and model status
 - Evidence export directory after a completed run
 - `artifacts/hardware/hardware-summary.json` from `scripts/capture-hardware.ps1`
+- `artifacts/validation/live-host-qualification.json` from `scripts/qualify-live-host.ps1`
 
 ## Suggested filenames
 

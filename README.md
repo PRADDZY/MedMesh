@@ -35,8 +35,8 @@ The fastest live path is:
 
 ```powershell
 $env:MEDMESH_QVAC_MODE='live'
-pnpm prepare:live
-pnpm validate:live
+pnpm qualify:live-host:dry
+pnpm qualify:live-host
 ```
 
 By default, MedMesh now uses pinned official live sources:
@@ -68,15 +68,32 @@ If the current Windows demo laptop struggles in live mode, start by lowering `ME
 
 The service loads `.env` from the repo root and `services/peer-core/.env`, with the service-local file taking precedence.
 
+## Recommended host workflow
+
+Use a stronger nearby machine as the `approved live demo host`, then keep this current Windows laptop as the control/dev machine if needed.
+
+```powershell
+pnpm qualify:live-host:dry
+pnpm qualify:live-host
+```
+
+The dry pass writes `artifacts/validation/live-host-qualification.json` and marks the machine as either:
+
+- `candidate-live-host`
+- `approved-live-demo-host`
+- `dev-or-controller-only`
+
+For the detailed handoff checklist, see `submission/LIVE_HOST_PLAYBOOK.md`.
+
 ## Demo flow
 
-1. Run `pnpm prepare:live` once if you want the cache warm before the demo.
+1. Run `pnpm qualify:live-host` on the borrowed live host and confirm the status is `approved-live-demo-host`.
 2. Start `peer-core` and open `peer-ui`.
-2. On the phone, enter the peer URL and pairing code shown on the console.
-3. Fill the emergency handoff fields, attach one or more document photos, and record a voice note.
-4. Save locally once, then submit to peer.
-5. Watch `peer-ui` show the job stages, summary, grounded answer, and export artifact.
-6. Download the markdown export and capture the evidence log for submission.
+3. On the phone, enter the peer URL and pairing code shown on the console.
+4. Fill the emergency handoff fields, attach one or more document photos, and record a voice note.
+5. Save locally once, then submit to peer.
+6. Watch `peer-ui` show the job stages, summary, grounded answer, and export artifact.
+7. Download the markdown export and capture the evidence log for submission.
 
 Artifacts default to:
 
@@ -88,6 +105,7 @@ Artifacts default to:
 - `pnpm typecheck`
 - `pnpm build`
 - `pnpm prepare:live:dry`
+- `pnpm qualify:live-host:dry`
 - Mock peer-core smoke test via `powershell -ExecutionPolicy Bypass -File .\scripts\mock-smoke.ps1`
 - Live validation script via `powershell -ExecutionPolicy Bypass -File .\scripts\live-validate.ps1`
 - Hardware capture helper via `powershell -ExecutionPolicy Bypass -File .\scripts\capture-hardware.ps1`
@@ -100,3 +118,4 @@ Artifacts default to:
 - A requested `live` run no longer silently masquerades as live if initialization fails; `/health` exposes requested mode, effective mode, model errors, and hardware metadata.
 - `pnpm prepare:live` writes `artifacts/validation/live-prewarm.json`, and `pnpm validate:live` now waits through longer first-run startup while capturing peer-core stdout/stderr logs.
 - On this current Windows host, live preflight is also honest about upstream runtime support. If `bare-runtime-win32-x64` is unavailable, MedMesh degrades to mock with an explicit blocker message instead of crashing.
+- `pnpm qualify:live-host` is the judge-facing gate for a borrowed live host; the current Windows dev machine can still be used as `dev-or-controller-only` when that gate blocks.

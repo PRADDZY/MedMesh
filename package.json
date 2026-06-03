@@ -12,6 +12,8 @@
     "lint": "pnpm -r --if-present lint",
     "prepare:live": "pnpm --filter @medmesh/peer-core exec tsx scripts/prewarm-live.ts",
     "prepare:live:dry": "pnpm --filter @medmesh/peer-core exec tsx scripts/prewarm-live.ts --dry-run",
+    "qualify:live-host": "powershell -ExecutionPolicy Bypass -File .\\scripts\\qualify-live-host.ps1",
+    "qualify:live-host:dry": "powershell -ExecutionPolicy Bypass -File .\\scripts\\qualify-live-host.ps1 -DryRun",
     "test": "pnpm -r --if-present test",
     "typecheck": "pnpm -r --if-present typecheck",
     "validate:live": "powershell -ExecutionPolicy Bypass -File .\\scripts\\live-validate.ps1",

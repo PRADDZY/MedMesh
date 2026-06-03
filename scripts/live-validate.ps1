@@ -19,6 +19,7 @@ $env:MEDMESH_APP_URL = if ([string]::IsNullOrWhiteSpace($env:MEDMESH_APP_URL)) {
 }
 $peerUrl = $env:MEDMESH_APP_URL
 $validationDir = Join-Path $repoRoot 'artifacts\validation'
+$healthPath = Join-Path $validationDir 'live-health.json'
 $stdoutLog = Join-Path $validationDir 'live-validate-peer.out.log'
 $stderrLog = Join-Path $validationDir 'live-validate-peer.err.log'
 
@@ -53,6 +54,8 @@ try {
     $stdout = if (Test-Path $stdoutLog) { Get-Content $stdoutLog -Raw } else { '' }
     throw "peer-core did not become ready within $startupTimeoutSeconds seconds.`nSTDERR:`n$stderr`nSTDOUT:`n$stdout"
   }
+
+  $health | ConvertTo-Json -Depth 8 | Set-Content -Path $healthPath
 
   if ($health.runtime.effectiveMode -ne 'live') {
     throw "Expected effectiveMode=live but got requested=$($health.runtime.requestedMode), effective=$($health.runtime.effectiveMode), error=$($health.runtime.liveInitError)"
@@ -118,6 +121,7 @@ try {
     capturedAt = (Get-Date).ToString('o')
     requestedMode = $health.runtime.requestedMode
     effectiveMode = $health.runtime.effectiveMode
+    healthPath = $healthPath
     providerTopic = $health.runtime.providerTopic
     providerPublicKey = $health.runtime.providerPublicKey
     deviceLabel = $health.runtime.hardware.deviceLabel
