@@ -8,15 +8,13 @@ import {
   type HardwareSummary,
   type HandoffSummary,
   type ModelStatus,
+  type QvacModelSource,
   type ProtocolCitation,
   type RuntimeStatus,
 } from "@medmesh/shared";
 
 import type { MedMeshConfig } from "../config.js";
-import {
-  buildLiveModelPlan,
-  type QvacModelSource,
-} from "./live-models.js";
+import { buildLiveModelPlan } from "./live-models.js";
 import { checkLiveRuntimeSupport } from "./live-preflight.js";
 
 type ModelType = ModelStatus["modelType"];

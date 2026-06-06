@@ -40,6 +40,29 @@ function getModelBadgeClass(status: RuntimeStatus["models"][number]["status"]): 
   return "badge idle";
 }
 
+function formatProcessingPathEntry(
+  entry: AnalysisJob["processingPath"][number],
+): string {
+  const route =
+    entry.route === "delegated-provider"
+      ? `delegated via ${entry.providerPublicKey?.slice(0, 12) ?? "provider"}`
+      : entry.route === "peer-local"
+        ? entry.attemptedDelegation
+          ? "peer-local fallback"
+          : "peer-local"
+        : "skipped";
+  const timings = [
+    entry.durationMs ? `total ${entry.durationMs}ms` : "",
+    entry.heartbeatMs ? `heartbeat ${entry.heartbeatMs}ms` : "",
+    entry.modelLoadMs ? `load ${entry.modelLoadMs}ms` : "",
+    entry.operationMs ? `compute ${entry.operationMs}ms` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  return `${entry.stage.toUpperCase()} · ${route}${timings ? ` · ${timings}` : ""}${entry.note ? ` · ${entry.note}` : ""}`;
+}
+
 function App() {
   const [health, setHealth] = useState<HealthPayload | null>(null);
   const [jobs, setJobs] = useState<AnalysisJob[]>([]);
@@ -99,8 +122,8 @@ function App() {
           <h1>Nearby compute for offline clinical handoff</h1>
           <p className="lede">
             This console shows pairing state, requested versus effective QVAC
-            runtime, evidence outputs, and every case job flowing in from the
-            field capture app.
+            runtime, delegated OCR and speech traces, evidence outputs, and
+            every case job flowing in from the field capture app.
           </p>
         </div>
         <div className="hero-stat-grid">
@@ -173,7 +196,7 @@ function App() {
               </div>
             </div>
           ) : (
-            <p>Waiting for peer-core pairing session…</p>
+            <p>Waiting for peer-core pairing session...</p>
           )}
         </article>
 
@@ -299,12 +322,26 @@ function App() {
                 </p>
               </div>
               <div className="detail-card wide">
+                <span className="label">Processing path</span>
+                <ul>
+                  {selectedJob.processingPath.length === 0 ? (
+                    <li>No delegation trace recorded yet.</li>
+                  ) : (
+                    selectedJob.processingPath.map((entry) => (
+                      <li key={`${entry.stage}-${entry.route}-${entry.requestedAt}`}>
+                        {formatProcessingPathEntry(entry)}
+                      </li>
+                    ))
+                  )}
+                </ul>
+              </div>
+              <div className="detail-card wide">
                 <span className="label">Overview</span>
-                <p>{selectedJob.summary?.overview ?? "Summary pending…"}</p>
+                <p>{selectedJob.summary?.overview ?? "Summary pending..."}</p>
               </div>
               <div className="detail-card wide">
                 <span className="label">Situation</span>
-                <p>{selectedJob.summary?.presentingSituation ?? "Situation pending…"}</p>
+                <p>{selectedJob.summary?.presentingSituation ?? "Situation pending..."}</p>
               </div>
               <div className="detail-card wide">
                 <span className="label">Key findings</span>

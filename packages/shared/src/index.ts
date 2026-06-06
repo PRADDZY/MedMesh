@@ -7,6 +7,10 @@ export type AttachmentKind = "document-photo" | "voice-note";
 export type RuntimeMode = "mock" | "live";
 export type RuntimeHealthState = "ready" | "degraded";
 export type LiveProfile = "lite" | "full";
+export type ProcessingRoute =
+  | "delegated-provider"
+  | "peer-local"
+  | "skipped";
 export type ModelRuntimeState =
   | "pending"
   | "loaded"
@@ -80,6 +84,32 @@ export interface CaseAttachment {
   createdAt: string;
 }
 
+export interface ProcessingPathEntry {
+  stage: Extract<AnalysisStageName, "ocr" | "transcribe">;
+  route: ProcessingRoute;
+  delegated: boolean;
+  attemptedDelegation: boolean;
+  providerPublicKey?: string;
+  consumerDeviceLabel?: string;
+  pairingCode?: string;
+  requestedAt: string;
+  completedAt?: string;
+  durationMs?: number;
+  heartbeatMs?: number;
+  modelLoadMs?: number;
+  operationMs?: number;
+  note?: string;
+  delegationError?: string;
+  profilingSummary?: string;
+  profiling?: Record<string, unknown>;
+}
+
+export interface DelegatedPreprocessing {
+  ocrText?: string[];
+  transcript?: string;
+  processingPath: ProcessingPathEntry[];
+}
+
 export interface CasePacket {
   id: string;
   presetId: ScenarioPresetId;
@@ -87,8 +117,10 @@ export interface CasePacket {
   captureDeviceLabel: string;
   peerBaseUrl?: string;
   pairingCode?: string;
+  providerPublicKey?: string;
   structuredIntake: StructuredIntake;
   attachments: CaseAttachment[];
+  delegatedPreprocessing?: DelegatedPreprocessing;
   createdAt: string;
   updatedAt: string;
   submittedAt?: string;
@@ -237,6 +269,7 @@ export interface AnalysisJob {
   };
   stages: AnalysisStage[];
   runtime: RuntimeStatus;
+  processingPath: ProcessingPathEntry[];
   ocrText: string[];
   transcript?: string;
   summary?: HandoffSummary;
@@ -248,6 +281,68 @@ export interface AnalysisJob {
 
 export const NON_DIAGNOSTIC_DISCLAIMER =
   "MedMesh is a workflow support tool for handoff, summarization, and grounded retrieval. It does not diagnose, prescribe, or replace clinical judgement.";
+
+export type QvacModelSource =
+  | string
+  | {
+      src: string;
+      name?: string;
+      [key: string]: unknown;
+    };
+
+const MEDPSY_1_7B_REVISION = "fd4cecc90c2de8dce4b112795456a54be9c59363";
+const MEDPSY_1_7B_FILE = "medpsy-1.7b-q4_k_m-imat.gguf";
+const WHISPER_TINY_REVISION = "5359861c739e955e79d9a303bcbc70fb988958b1";
+const VAD_SILERO_REVISION = "9ffd54a1e1ee413ddf265af9913beaf518d1639b";
+
+export const OFFICIAL_QVAC_MODEL_SOURCES = {
+  medPsy17b: {
+    src: `https://huggingface.co/qvac/MedPsy-1.7B-GGUF/resolve/${MEDPSY_1_7B_REVISION}/${MEDPSY_1_7B_FILE}`,
+    name: "MedPsy 1.7B Q4_K_M (official)",
+  } satisfies QvacModelSource,
+  whisperTiny: {
+    src: `registry://hf/ggerganov/whisper.cpp/resolve/${WHISPER_TINY_REVISION}/ggml-tiny.bin`,
+    name: "WHISPER_TINY",
+  } satisfies QvacModelSource,
+  vadSilero512: {
+    src: `registry://hf/ggml-org/whisper-vad/resolve/${VAD_SILERO_REVISION}/ggml-silero-v5.1.2.bin`,
+    name: "VAD_SILERO_5_1_2",
+  } satisfies QvacModelSource,
+  ocrLatinRecognizer1: {
+    src: "registry://s3/qvac_models_compiled/ocr/2026-02-12/rec_dyn/recognizer_latin.onnx",
+    name: "OCR_LATIN_RECOGNIZER_1",
+  } satisfies QvacModelSource,
+} as const;
+
+export function describeQvacModelSource(
+  source: QvacModelSource | undefined,
+): string | undefined {
+  if (!source) {
+    return undefined;
+  }
+
+  return typeof source === "string" ? source : source.src;
+}
+
+export function mergeProcessingPath(
+  current: ProcessingPathEntry[],
+  next: ProcessingPathEntry,
+): ProcessingPathEntry[] {
+  const otherEntries = current.filter((entry) => entry.stage !== next.stage);
+  const existing = current.find((entry) => entry.stage === next.stage);
+
+  return [
+    ...otherEntries,
+    {
+      ...existing,
+      ...next,
+      attemptedDelegation:
+        next.attemptedDelegation || existing?.attemptedDelegation || false,
+      delegated: next.delegated,
+      requestedAt: next.requestedAt ?? existing?.requestedAt ?? new Date().toISOString(),
+    },
+  ].sort((left, right) => left.stage.localeCompare(right.stage));
+}
 
 export const REMOTE_API_MANIFEST = {
   aiServices: [] as string[],

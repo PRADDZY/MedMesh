@@ -27,6 +27,6 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": ["expo-sqlite"]
+    "plugins": ["expo-sqlite", "@qvac/sdk/expo-plugin"]
   }
 }

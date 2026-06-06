@@ -1,6 +1,7 @@
 import { StatusBar } from "expo-status-bar";
 import {
   Alert,
+  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -28,11 +29,16 @@ import {
   type AnalysisJob,
   type CaseAttachment,
   type CasePacket,
-  type ScenarioPresetId,
 } from "@medmesh/shared";
 
-import { askGroundedQuestion, pingPeer, submitCasePacket } from "./src/api";
+import {
+  askGroundedQuestion,
+  pingPeer,
+  submitCasePacket,
+  type HealthResponse,
+} from "./src/api";
 import { storeLocalFile } from "./src/files";
+import { runDelegatedPreprocessing } from "./src/qvac-delegation";
 import { initCaseStore, listSavedCasePackets, saveCasePacket } from "./src/storage";
 
 function attachmentLabel(attachment: CaseAttachment): string {
@@ -43,12 +49,38 @@ function trimBaseUrl(value: string): string {
   return value.trim().replace(/\/$/, "");
 }
 
-function formatPeerStatus(health: Awaited<ReturnType<typeof pingPeer>>): string {
+function formatPeerStatus(health: HealthResponse): string {
   const modeSummary = `${health.runtime.requestedMode} requested / ${health.runtime.effectiveMode} effective`;
+  const providerSummary = ` · provider ${health.pairing.providerPublicKey.slice(0, 10)}…`;
   const issue = health.runtime.liveInitError
     ? ` · degraded: ${health.runtime.liveInitError}`
     : "";
-  return `${health.app} · ${modeSummary} · code ${health.pairing.code}${issue}`;
+
+  return `${health.app} · ${modeSummary} · code ${health.pairing.code}${providerSummary}${issue}`;
+}
+
+function canDelegateToPeer(health: HealthResponse): boolean {
+  return (
+    Platform.OS === "android" &&
+    health.runtime.effectiveMode === "live" &&
+    health.pairing.providerMode === "live" &&
+    !health.runtime.liveInitError
+  );
+}
+
+function formatProcessingPathEntry(
+  entry: AnalysisJob["processingPath"][number],
+): string {
+  const route =
+    entry.route === "delegated-provider"
+      ? `delegated via ${entry.providerPublicKey?.slice(0, 10) ?? "provider"}`
+      : entry.route === "peer-local"
+        ? entry.attemptedDelegation
+          ? "peer-local fallback"
+          : "peer-local"
+        : "skipped";
+  const timing = entry.durationMs ? ` (${entry.durationMs}ms)` : "";
+  return `${entry.stage.toUpperCase()} · ${route}${timing}${entry.note ? ` · ${entry.note}` : ""}`;
 }
 
 function App() {
@@ -57,6 +89,7 @@ function App() {
   const [peerBaseUrl, setPeerBaseUrl] = useState("http://localhost:4747");
   const [pairingCode, setPairingCode] = useState("");
   const [peerStatus, setPeerStatus] = useState("Not checked");
+  const [lastHealth, setLastHealth] = useState<HealthResponse | null>(null);
   const [activeJob, setActiveJob] = useState<AnalysisJob | null>(null);
   const [question, setQuestion] = useState("");
   const [busyLabel, setBusyLabel] = useState("");
@@ -89,7 +122,7 @@ function App() {
     }, 3000);
 
     return () => clearInterval(timer);
-  }, [activeJob]);
+  }, [activeJob, peerBaseUrl]);
 
   async function pollActiveJob(jobId: string): Promise<void> {
     try {
@@ -97,6 +130,7 @@ function App() {
       const response = await fetch(`${trimBaseUrl(peerBaseUrl)}/api/jobs/${jobId}`);
       const job = (await response.json()) as AnalysisJob;
       setPeerStatus(formatPeerStatus(health));
+      setLastHealth(health);
       setActiveJob(job);
     } catch (error) {
       setPeerStatus(
@@ -127,7 +161,7 @@ function App() {
   }
 
   async function handlePickDocument(mode: "library" | "camera"): Promise<void> {
-    setBusyLabel(mode === "camera" ? "Opening camera…" : "Opening library…");
+    setBusyLabel(mode === "camera" ? "Opening camera..." : "Opening library...");
     try {
       const permission =
         mode === "camera"
@@ -182,7 +216,7 @@ function App() {
 
   async function handleToggleRecording(): Promise<void> {
     if (recorderState.isRecording) {
-      setBusyLabel("Saving voice note…");
+      setBusyLabel("Saving voice note...");
       try {
         await recorder.stop();
         if (!recorder.uri) {
@@ -222,7 +256,7 @@ function App() {
       return;
     }
 
-    setBusyLabel("Recording voice note…");
+    setBusyLabel("Recording voice note...");
     try {
       await recorder.prepareToRecordAsync();
       recorder.record();
@@ -232,9 +266,10 @@ function App() {
   }
 
   async function handleCheckPeer(): Promise<void> {
-    setBusyLabel("Checking peer…");
+    setBusyLabel("Checking peer...");
     try {
       const response = await pingPeer(trimBaseUrl(peerBaseUrl));
+      setLastHealth(response);
       setPeerStatus(formatPeerStatus(response));
       if (!pairingCode) {
         setPairingCode(response.pairing.code);
@@ -253,16 +288,47 @@ function App() {
       return;
     }
 
-    setBusyLabel("Submitting to peer…");
+    setBusyLabel("Submitting to peer...");
     try {
-      const nextPacket = {
+      let peerHealth: HealthResponse | null = null;
+      try {
+        peerHealth = await pingPeer(baseUrl);
+        setLastHealth(peerHealth);
+        setPeerStatus(formatPeerStatus(peerHealth));
+        if (!pairingCode) {
+          setPairingCode(peerHealth.pairing.code);
+        }
+      } catch (error) {
+        setPeerStatus(
+          error instanceof Error
+            ? error.message
+            : "Could not verify peer health before submit",
+        );
+      }
+
+      let nextPacket: CasePacket = {
         ...packet,
-        status: "queued" as const,
+        status: "queued",
         peerBaseUrl: baseUrl,
-        pairingCode,
+        pairingCode: pairingCode || peerHealth?.pairing.code || packet.pairingCode,
+        providerPublicKey: peerHealth?.pairing.providerPublicKey,
+        delegatedPreprocessing: undefined,
         submittedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
+
+      if (peerHealth && canDelegateToPeer(peerHealth)) {
+        setBusyLabel("Delegating OCR and voice transcription...");
+        nextPacket = {
+          ...nextPacket,
+          delegatedPreprocessing: await runDelegatedPreprocessing(
+            nextPacket,
+            peerHealth.pairing,
+          ),
+        };
+      }
+
+      setBusyLabel("Submitting to peer...");
       const job = await submitCasePacket(baseUrl, nextPacket);
       setPacket(nextPacket);
       setActiveJob(job);
@@ -283,7 +349,7 @@ function App() {
       return;
     }
 
-    setBusyLabel("Asking grounded question…");
+    setBusyLabel("Asking grounded question...");
     try {
       const updated = await askGroundedQuestion(
         trimBaseUrl(peerBaseUrl),
@@ -311,8 +377,8 @@ function App() {
           <Text style={styles.title}>Mobile-first intake for private emergency handoff</Text>
           <Text style={styles.lede}>
             Capture a structured case, attach paperwork, record a quick voice note,
-            then hand the bundle to a nearby peer device for OCR, summarization,
-            and protocol-grounded follow-ups.
+            delegate OCR and speech transcription to a nearby QVAC peer, then
+            receive a grounded handoff summary and follow-ups.
           </Text>
         </View>
 
@@ -400,7 +466,7 @@ function App() {
                 structuredIntake: { ...current.structuredIntake, chiefComplaint: value },
               }))
             }
-            placeholder="Shortness of breath, chest pain, psych distress…"
+            placeholder="Shortness of breath, chest pain, psych distress..."
           />
           <Field
             label="Urgency"
@@ -433,7 +499,7 @@ function App() {
                 structuredIntake: { ...current.structuredIntake, redFlags: value },
               }))
             }
-            placeholder="Airway concern, falling SpO2, agitation…"
+            placeholder="Airway concern, falling SpO2, agitation..."
             multiline
           />
           <Field
@@ -513,7 +579,7 @@ function App() {
             </Text>
           </Pressable>
           <Text style={styles.helperText}>
-            {recorderState.isRecording ? "Recording in progress…" : "Attach paperwork and one voice note."}
+            {recorderState.isRecording ? "Recording in progress..." : "Attach paperwork and one voice note."}
           </Text>
           <View style={styles.attachmentList}>
             {packet.attachments.length === 0 ? (
@@ -551,12 +617,25 @@ function App() {
               </Text>
               <Text style={styles.summaryHeading}>Overview</Text>
               <Text style={styles.summaryText}>
-                {activeJob.summary?.overview ?? "Waiting for summary…"}
+                {activeJob.summary?.overview ?? "Waiting for summary..."}
               </Text>
               <Text style={styles.summaryHeading}>Protocol-grounded answer</Text>
               <Text style={styles.summaryText}>
-                {activeJob.groundedAnswers[0]?.answer ?? "Waiting for grounded Q&A…"}
+                {activeJob.groundedAnswers[0]?.answer ?? "Waiting for grounded Q&A..."}
               </Text>
+              <Text style={styles.summaryHeading}>Processing path</Text>
+              {activeJob.processingPath.length === 0 ? (
+                <Text style={styles.summaryText}>Waiting for delegation trace...</Text>
+              ) : (
+                activeJob.processingPath.map((entry) => (
+                  <Text
+                    key={`${entry.stage}-${entry.route}-${entry.requestedAt}`}
+                    style={styles.summaryText}
+                  >
+                    {formatProcessingPathEntry(entry)}
+                  </Text>
+                ))
+              )}
               <Field
                 label="Ask a follow-up"
                 value={question}

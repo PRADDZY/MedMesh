@@ -2,3 +2,8 @@ packages:
   - apps/*
   - packages/*
   - services/*
+allowBuilds:
+  esbuild: true
+  msgpackr-extract: true
+minimumReleaseAgeExclude:
+  - expo-build-properties@56.0.17

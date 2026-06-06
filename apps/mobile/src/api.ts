@@ -6,7 +6,7 @@ type UploadValue = {
   type: string;
 };
 
-interface HealthResponse {
+export interface HealthResponse {
   app: string;
   pairing: PairingSession;
   runtime: RuntimeStatus;

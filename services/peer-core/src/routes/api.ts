@@ -20,6 +20,32 @@ import { runAnalysisJob } from "../lib/pipeline.js";
 import { ensurePairingSession } from "../lib/pairing.js";
 import type { QvacRuntime } from "../lib/qvac-runtime.js";
 
+const processingPathEntrySchema = z.object({
+  stage: z.enum(["ocr", "transcribe"]),
+  route: z.enum(["delegated-provider", "peer-local", "skipped"]),
+  delegated: z.boolean(),
+  attemptedDelegation: z.boolean(),
+  providerPublicKey: z.string().optional(),
+  consumerDeviceLabel: z.string().optional(),
+  pairingCode: z.string().optional(),
+  requestedAt: z.string(),
+  completedAt: z.string().optional(),
+  durationMs: z.number().optional(),
+  heartbeatMs: z.number().optional(),
+  modelLoadMs: z.number().optional(),
+  operationMs: z.number().optional(),
+  note: z.string().optional(),
+  delegationError: z.string().optional(),
+  profilingSummary: z.string().optional(),
+  profiling: z.record(z.string(), z.unknown()).optional(),
+});
+
+const delegatedPreprocessingSchema = z.object({
+  ocrText: z.array(z.string()).optional(),
+  transcript: z.string().optional(),
+  processingPath: z.array(processingPathEntrySchema).default([]),
+});
+
 const packetSchema = z.object({
   id: z.string(),
   presetId: z.enum(["emergency", "rural-referral", "specialist-consult"]),
@@ -27,6 +53,7 @@ const packetSchema = z.object({
   captureDeviceLabel: z.string(),
   peerBaseUrl: z.string().optional(),
   pairingCode: z.string().optional(),
+  providerPublicKey: z.string().optional(),
   structuredIntake: z.object({
     patientAlias: z.string(),
     ageBand: z.string(),
@@ -54,6 +81,7 @@ const packetSchema = z.object({
       }),
     )
     .default([]),
+  delegatedPreprocessing: delegatedPreprocessingSchema.optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
   submittedAt: z.string().optional(),
@@ -190,6 +218,10 @@ export function createApiRouter({
           { name: "ground", state: "pending" },
         ],
         runtime: runtimeStatus,
+        processingPath:
+          packet.delegatedPreprocessing?.processingPath.map((entry) => ({
+            ...entry,
+          })) ?? [],
         ocrText: [],
         groundedAnswers: [],
         evidenceEventIds: [],
@@ -205,6 +237,14 @@ export function createApiRouter({
           documentCount: documentPaths.length,
           hasVoiceNote: Boolean(voiceNotePath),
           pairingCode: job.pairingCode,
+          providerPublicKey:
+            packet.providerPublicKey ?? pairing.providerPublicKey,
+          delegatedStages: job.processingPath.map((entry) => ({
+            stage: entry.stage,
+            route: entry.route,
+            attemptedDelegation: entry.attemptedDelegation,
+            delegated: entry.delegated,
+          })),
           requestedMode: runtimeStatus.requestedMode,
           effectiveMode: runtimeStatus.effectiveMode,
           evidenceDir: runtimeStatus.artifactPaths.evidenceDir,

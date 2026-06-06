@@ -1,14 +1,14 @@
 # MedMesh Handoff
 
-MedMesh Handoff is a local-first mobile capture workflow for emergency and referral handoff. An Android phone captures structured intake, document photos, and a voice note; a nearby trusted Windows laptop processes the case locally with `@qvac/sdk` and generates a grounded, non-diagnostic handoff packet.
+MedMesh Handoff is a local-first mobile capture workflow for emergency and referral handoff. An Android phone captures structured intake, document photos, and a voice note, then delegates OCR and speech transcription to a nearby trusted Windows laptop over QVAC while the peer assembles a grounded, non-diagnostic handoff packet.
 
 ## Why this fits QVAC
 
-- Uses `@qvac/sdk` for live OCR, transcription, provider startup, and local model orchestration.
+- Uses `@qvac/sdk` for real delegated OCR and transcription from phone to peer, provider startup, and local model orchestration.
 - Keeps AI workloads on the approved local peer with no cloud AI APIs.
 - Ships evidence logs, exports, validation artifacts, and a peer console for reproducibility.
 - Supports the main `emergency handoff` story with `rural referral` and `specialist consult` presets.
-- Makes the approved `lite` profile explicit: live QVAC OCR + live QVAC Whisper on this 4 GB Windows laptop, with deterministic local summary and grounded follow-up for reliability.
+- Makes the approved `lite` profile explicit: the phone delegates live QVAC OCR + live QVAC Whisper to this 4 GB Windows laptop, with deterministic local summary and grounded follow-up for reliability.
 
 ## Workspace
 
@@ -99,8 +99,8 @@ The service loads `.env` from the repo root and `services/peer-core/.env`, with 
 2. Start `peer-core` and open `peer-ui`.
 3. On the phone, enter the peer URL and pairing code shown on the console.
 4. Fill the emergency handoff fields, attach one or more document photos, and record a voice note.
-5. Save locally once, then submit to peer.
-6. Watch `peer-ui` show OCR, transcription, summary, grounded answer, and export generation.
+5. Save locally once, then submit to peer; the phone delegates OCR and transcription to the paired provider before upload completes.
+6. Watch `peer-ui` show the delegated processing path, summary, grounded answer, and export generation.
 7. Download the markdown export and capture the evidence log for submission.
 
 For automated proof runs, `pnpm validate:live` now generates a synthetic referral-note image and a synthetic voice-note WAV by default so the validation bundle exercises all three capture lanes. The final judge video should still use real phone-captured photo/audio.
@@ -130,6 +130,7 @@ Artifacts default to:
 ## Notes
 
 - Pairing is manual URL + code entry today; the peer console already emits a QR payload for a later pass.
+- `apps/mobile` now expects the Expo plugin path `@qvac/sdk/expo-plugin` during prebuild so the QVAC mobile worker bundle is generated correctly.
 - `Build in Public` assets are intentionally out of scope for v1.
 - The current approved submission path is honest about its profile: live OCR and transcription on this laptop, deterministic summary assembly for reliability, and a strict non-diagnostic boundary.
 - `pnpm freeze:submission-assets` now curates `submission/final-assets/events.jsonl` to the selected approved live job instead of copying older mock runs into the submission bundle.

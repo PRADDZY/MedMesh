@@ -6,7 +6,7 @@ MedMesh Handoff
 
 ## One-line pitch
 
-A private mobile-to-laptop handoff workflow that captures structured intake, document photos, and voice notes offline, then uses local QVAC OCR and transcription on a nearby peer to assemble a grounded, non-diagnostic handoff packet.
+A private mobile-to-laptop handoff workflow that captures structured intake, document photos, and voice notes offline, then delegates QVAC OCR and transcription to a nearby peer to assemble a grounded, non-diagnostic handoff packet.
 
 ## Problem
 
@@ -14,11 +14,11 @@ Emergency and referral handoffs often happen under pressure, with poor connectiv
 
 ## Solution
 
-MedMesh lets a responder or clinician capture a case on an Android phone using three lanes: structured intake, document photos, and a voice note. A trusted nearby Windows laptop processes the packet locally, extracts text with OCR, transcribes the voice note, and produces a concise grounded handoff summary plus follow-up support for the receiving clinician.
+MedMesh lets a responder or clinician capture a case on an Android phone using three lanes: structured intake, document photos, and a voice note. The phone then delegates OCR and speech transcription to a trusted nearby Windows laptop over QVAC, and the peer produces a concise grounded handoff summary plus follow-up support for the receiving clinician.
 
 ## How this uses QVAC
 
-MedMesh uses `@qvac/sdk` for live OCR, live speech transcription, local model orchestration, and provider startup. The approved current-laptop submission path runs the `lite` live profile: QVAC handles OCR and transcription locally on the peer, while summary assembly and grounded answer generation stay deterministic and local for reliability on 4 GB Windows hardware.
+MedMesh uses `@qvac/sdk` for provider startup, delegated OCR, delegated speech transcription, and local model orchestration. The approved current-laptop submission path runs the `lite` live profile: the Android app is a true QVAC consumer for OCR and transcription, while summary assembly and grounded answer generation stay deterministic and local on the peer for reliability on 4 GB Windows hardware.
 
 ## Privacy / local-first note
 

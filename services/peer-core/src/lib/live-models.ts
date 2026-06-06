@@ -1,12 +1,10 @@
-import type { MedMeshConfig } from "../config.js";
+import {
+  OFFICIAL_QVAC_MODEL_SOURCES,
+  describeQvacModelSource,
+  type QvacModelSource,
+} from "@medmesh/shared";
 
-export type QvacModelSource =
-  | string
-  | {
-      src: string;
-      name?: string;
-      [key: string]: unknown;
-    };
+import type { MedMeshConfig } from "../config.js";
 
 type ModelSourceOrigin = "env" | "official-default" | "disabled";
 
@@ -24,37 +22,20 @@ export interface LiveModelPlan {
   embeddings: ResolvedModelSource;
 }
 
-const MEDPSY_1_7B_REVISION = "fd4cecc90c2de8dce4b112795456a54be9c59363";
-const MEDPSY_1_7B_FILE = "medpsy-1.7b-q4_k_m-imat.gguf";
-const WHISPER_TINY_REVISION = "5359861c739e955e79d9a303bcbc70fb988958b1";
-const VAD_SILERO_REVISION = "9ffd54a1e1ee413ddf265af9913beaf518d1639b";
-
 function createMedPsyDefaultSource(): QvacModelSource {
-  return {
-    src: `https://huggingface.co/qvac/MedPsy-1.7B-GGUF/resolve/${MEDPSY_1_7B_REVISION}/${MEDPSY_1_7B_FILE}`,
-    name: "MedPsy 1.7B Q4_K_M (official)",
-  };
+  return OFFICIAL_QVAC_MODEL_SOURCES.medPsy17b;
 }
 
 function createWhisperTinyDefaultSource(): QvacModelSource {
-  return {
-    src: `registry://hf/ggerganov/whisper.cpp/resolve/${WHISPER_TINY_REVISION}/ggml-tiny.bin`,
-    name: "WHISPER_TINY",
-  };
+  return OFFICIAL_QVAC_MODEL_SOURCES.whisperTiny;
 }
 
 function createVadSileroDefaultSource(): QvacModelSource {
-  return {
-    src: `registry://hf/ggml-org/whisper-vad/resolve/${VAD_SILERO_REVISION}/ggml-silero-v5.1.2.bin`,
-    name: "VAD_SILERO_5_1_2",
-  };
+  return OFFICIAL_QVAC_MODEL_SOURCES.vadSilero512;
 }
 
 function createOcrLatinDefaultSource(): QvacModelSource {
-  return {
-    src: "registry://s3/qvac_models_compiled/ocr/2026-02-12/rec_dyn/recognizer_latin.onnx",
-    name: "OCR_LATIN_RECOGNIZER_1",
-  };
+  return OFFICIAL_QVAC_MODEL_SOURCES.ocrLatinRecognizer1;
 }
 
 function resolveSource(
@@ -85,11 +66,7 @@ function resolveSource(
 export function describeModelSource(
   source: QvacModelSource | undefined,
 ): string | undefined {
-  if (!source) {
-    return undefined;
-  }
-
-  return typeof source === "string" ? source : source.src;
+  return describeQvacModelSource(source);
 }
 
 export function buildLiveModelPlan(config: MedMeshConfig): LiveModelPlan {
