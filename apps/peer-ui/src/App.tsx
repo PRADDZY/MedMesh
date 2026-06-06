@@ -120,6 +120,10 @@ function App() {
             <span>Health</span>
             <strong>{health?.runtime.health ?? "—"}</strong>
           </div>
+          <div className="stat-card">
+            <span>Live profile</span>
+            <strong>{health?.runtime.liveProfile ?? "—"}</strong>
+          </div>
         </div>
       </section>
 
@@ -220,7 +224,9 @@ function App() {
           </header>
           <div className="job-list">
             {jobs.length === 0 ? (
-              <p className="empty-state">No case packets yet. Submit one from the mobile app.</p>
+              <p className="empty-state">
+                No case packets yet. Submit one from the mobile app.
+              </p>
             ) : (
               jobs.map((job) => (
                 <button
@@ -254,14 +260,20 @@ function App() {
               <h2>Judge-facing handoff artifact</h2>
             </div>
             {selectedJob?.exportPath ? (
-              <a className="ghost-link" href={`/api/jobs/${selectedJob.id}/export`} target="_blank">
+              <a
+                className="ghost-link"
+                href={`/api/jobs/${selectedJob.id}/export`}
+                target="_blank"
+              >
                 Export markdown
               </a>
             ) : null}
           </header>
 
           {!selectedJob ? (
-            <p className="empty-state">Pick a job to inspect its summary, timings, and grounded answers.</p>
+            <p className="empty-state">
+              Pick a job to inspect its summary, timings, and grounded answers.
+            </p>
           ) : (
             <div className="detail-grid">
               <div className="detail-card">
@@ -271,6 +283,20 @@ function App() {
               <div className="detail-card">
                 <span className="label">Pairing code</span>
                 <strong>{selectedJob.pairingCode}</strong>
+              </div>
+              <div className="detail-card">
+                <span className="label">Inputs</span>
+                <strong>
+                  {selectedJob.inputSummary?.documentCount ?? 0} docs ·{" "}
+                  {selectedJob.inputSummary?.hasVoiceNote ? "voice note" : "no voice"}
+                </strong>
+              </div>
+              <div className="detail-card wide">
+                <span className="label">Attachment files</span>
+                <p>
+                  {(selectedJob.inputSummary?.attachmentNames ?? []).join(", ") ||
+                    "No uploaded files."}
+                </p>
               </div>
               <div className="detail-card wide">
                 <span className="label">Overview</span>
@@ -289,7 +315,7 @@ function App() {
                 </ul>
               </div>
               <div className="detail-card wide">
-                <span className="label">Grounded Q&A</span>
+                <span className="label">Grounded Q&amp;A</span>
                 <ul>
                   {selectedJob.groundedAnswers.length === 0 ? (
                     <li>No grounded answer yet.</li>
@@ -308,7 +334,9 @@ function App() {
         </article>
       </section>
 
-      <footer className="footer-note">{health?.disclaimer ?? NON_DIAGNOSTIC_DISCLAIMER}</footer>
+      <footer className="footer-note">
+        {health?.disclaimer ?? NON_DIAGNOSTIC_DISCLAIMER}
+      </footer>
     </main>
   );
 }

@@ -1,8 +1,8 @@
 {
-    "capturedAt":  "2026-06-03T23:42:34.9953447+05:30",
+    "capturedAt":  "2026-06-07T00:37:43.3396979+05:30",
     "qualificationStatus":  "approved",
     "recommendedRole":  "approved-live-demo-host",
-    "jobId":  "22e313ba-44ae-4a7f-981b-f5446d31fbc2",
+    "jobId":  "8f98dcc5-d787-439c-b811-e0f4f019046a",
     "runtime":  {
                     "requestedMode":  "live",
                     "effectiveMode":  "live",
@@ -15,15 +15,25 @@
                  "cpuName":  "Intel(R) Core(TM) i3-1005G1 CPU @ 1.20GHz",
                  "totalMemoryGb":  3.7
              },
+    "validation":  {
+                       "documentCount":  1,
+                       "hasVoiceNote":  true,
+                       "attachmentNames":  [
+                                               "1780772715890-emergency-note.png",
+                                               "1780772715895-voice-note.wav"
+                                           ],
+                       "attachmentMode":  "synthetic"
+                   },
     "copiedFiles":  [
                         "live-doctor.json",
                         "live-host-qualification.json",
                         "live-health.json",
                         "live-validation.json",
                         "hardware-summary.json",
-                        "events.jsonl",
-                        "approved-export.md"
+                        "approved-export.md",
+                        "events.jsonl"
                     ],
+    "filteredEvidenceEvents":  12,
     "screenshotChecklist":  [
                                 "mobile-intake.png",
                                 "peer-console-runtime.png",

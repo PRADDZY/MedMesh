@@ -10,7 +10,7 @@
                     "health":  "ready",
                     "providerStarted":  true,
                     "providerTopic":  "6d65646d6573682d706565722d746f7069632d64656d6f000000000000000000",
-                    "providerPublicKey":  "0265a2957d0c006b607f1bf6382fa7d27061142fe1de502dc140450986b3eaff",
+                    "providerPublicKey":  "a6a31d0b55ee4062cf4e3b5fdf49a2abac0fd658bd55cdf46e2ae6b6e9cc9992",
                     "preflight":  {
                                       "ok":  true,
                                       "packageName":  "bare-runtime-win32-x64",
@@ -33,7 +33,7 @@
                                      "cpuModel":  "Intel(R) Core(TM) i3-1005G1 CPU @ 1.20GHz",
                                      "cpuCores":  4,
                                      "totalMemoryGb":  3.7,
-                                     "collectedAt":  "2026-06-03T18:11:25.922Z"
+                                     "collectedAt":  "2026-06-06T19:04:36.967Z"
                                  },
                     "artifactPaths":  {
                                           "dataDir":  "C:\\Users\\Pratik Daithankar\\Desktop\\qvac\\.worktrees\\feat-medmesh-v1\\data\\peer-core",
@@ -81,14 +81,14 @@
                                ]
                 },
     "pairing":  {
-                    "code":  "BTCY4T",
+                    "code":  "6V1M9M",
                     "topic":  "6d65646d6573682d706565722d746f7069632d64656d6f000000000000000000",
-                    "providerPublicKey":  "0265a2957d0c006b607f1bf6382fa7d27061142fe1de502dc140450986b3eaff",
+                    "providerPublicKey":  "a6a31d0b55ee4062cf4e3b5fdf49a2abac0fd658bd55cdf46e2ae6b6e9cc9992",
                     "providerMode":  "live",
                     "baseUrl":  "http://localhost:4768",
-                    "generatedAt":  "2026-06-03T18:11:44.157Z",
-                    "expiresAt":  "2026-06-04T18:11:44.157Z",
-                    "qrValue":  "{\"code\":\"BTCY4T\",\"baseUrl\":\"http://localhost:4768\",\"topic\":\"6d65646d6573682d706565722d746f7069632d64656d6f000000000000000000\",\"providerPublicKey\":\"0265a2957d0c006b607f1bf6382fa7d27061142fe1de502dc140450986b3eaff\"}"
+                    "generatedAt":  "2026-06-06T19:05:15.220Z",
+                    "expiresAt":  "2026-06-07T19:05:15.221Z",
+                    "qrValue":  "{\"code\":\"6V1M9M\",\"baseUrl\":\"http://localhost:4768\",\"topic\":\"6d65646d6573682d706565722d746f7069632d64656d6f000000000000000000\",\"providerPublicKey\":\"a6a31d0b55ee4062cf4e3b5fdf49a2abac0fd658bd55cdf46e2ae6b6e9cc9992\"}"
                 },
     "remoteApis":  {
                        "aiServices":  [
@@ -99,7 +99,7 @@
                                            ],
                        "notes":  "MedMesh keeps AI workloads on-device or on trusted peer hardware. Optional utilities should be disclosed before submission."
                    },
-    "jobCount":  11,
+    "jobCount":  15,
     "artifactPaths":  {
                           "dataDir":  "C:\\Users\\Pratik Daithankar\\Desktop\\qvac\\.worktrees\\feat-medmesh-v1\\data\\peer-core",
                           "evidenceDir":  "C:\\Users\\Pratik Daithankar\\Desktop\\qvac\\.worktrees\\feat-medmesh-v1\\artifacts\\evidence"

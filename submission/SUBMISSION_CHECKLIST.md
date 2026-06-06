@@ -18,7 +18,9 @@
 - Run `pnpm qualify:live-host` on this laptop and confirm `qualificationStatus=approved` before the final demo.
 - Set `MEDMESH_APP_URL` to a real LAN URL on the laptop when recording the phone demo.
 - Run `powershell -ExecutionPolicy Bypass -File .\scripts\mock-smoke.ps1` for a reproducible fallback sanity check.
+- Run `pnpm validate:live` and confirm the final report includes `documentCount >= 1` and `hasVoiceNote = true`.
 - Run `pnpm freeze:submission-assets` after the approved live run.
+- Run `pnpm submission:check` before submitting; it should only stay blocked on screenshots/video until those manual assets are finished.
 - Keep these generated artifacts:
   - `artifacts/validation/live-doctor.json`
   - `artifacts/validation/live-host-qualification.json`
@@ -28,6 +30,7 @@
   - `artifacts/evidence/events.jsonl`
   - `submission/final-assets/approved-export.md`
   - `submission/final-assets/freeze-manifest.json`
+- Confirm `submission/final-assets/events.jsonl` only contains the approved live job, not earlier mock runs.
 - Capture screenshots of:
   - `submission/final-assets/screenshots/mobile-intake.png`
   - `submission/final-assets/screenshots/peer-console-runtime.png`
@@ -43,4 +46,4 @@
 - Pairing is manual URL + code entry today.
 - The approved live profile on this machine is `lite`, not `full`.
 - `full` mode remains opt-in for stronger hardware and is not part of the current approved evidence bundle.
-- The automated live validator proves real live runtime startup plus a completed live job, but the final demo video should still include real phone-captured photos/audio for the strongest judge evidence.
+- The automated live validator now exercises document + voice attachments by default, but the final demo video should still include real phone-captured photos/audio for the strongest judge evidence.

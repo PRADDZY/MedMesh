@@ -174,6 +174,14 @@ export function createApiRouter({
         status: "queued",
         createdAt,
         updatedAt: createdAt,
+        inputSummary: {
+          documentCount: documentPaths.length,
+          hasVoiceNote: Boolean(voiceNotePath),
+          attachmentNames: [
+            ...documentPaths.map((filePath) => path.basename(filePath)),
+            ...(voiceNotePath ? [path.basename(voiceNotePath)] : []),
+          ],
+        },
         stages: [
           { name: "normalize", state: "pending" },
           { name: "ocr", state: "pending" },

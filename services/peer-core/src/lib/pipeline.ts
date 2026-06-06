@@ -80,8 +80,12 @@ function createExportMarkdown(job: AnalysisJob): string {
         `- ${stage.name}: ${stage.state}${stage.durationMs ? ` (${stage.durationMs}ms)` : ""}`,
     )
     .join("\n");
+  const inputSummary = job.inputSummary;
+  const transcriptExcerpt = job.transcript
+    ? job.transcript.slice(0, 240)
+    : "No voice transcript available.";
 
-  return `# MedMesh Handoff Export\n\n## Job\n- Job ID: ${job.id}\n- Case Packet: ${job.casePacketId}\n- Status: ${job.status}\n- Pairing Code: ${job.pairingCode}\n- Requested Mode: ${job.runtime.requestedMode}\n- Effective Mode: ${job.runtime.effectiveMode}\n- Peer Device: ${job.runtime.hardware.deviceLabel}\n- CPU: ${job.runtime.hardware.cpuModel} (${job.runtime.hardware.cpuCores} cores)\n- Memory: ${job.runtime.hardware.totalMemoryGb} GB\n\n## Summary\n- Overview: ${summary?.overview ?? "Pending"}\n- Situation: ${summary?.presentingSituation ?? "Pending"}\n- Key Findings: ${(summary?.keyFindings ?? []).join("; ")}\n- Unresolved Risks: ${(summary?.unresolvedRisks ?? []).join("; ")}\n\n## Protocol-grounded Q&A\n${answers || "- None yet"}\n\n## Stage timings\n${stages}\n\n## Disclaimer\n${NON_DIAGNOSTIC_DISCLAIMER}\n`;
+  return `# MedMesh Handoff Export\n\n## Job\n- Job ID: ${job.id}\n- Case Packet: ${job.casePacketId}\n- Status: ${job.status}\n- Pairing Code: ${job.pairingCode}\n- Requested Mode: ${job.runtime.requestedMode}\n- Effective Mode: ${job.runtime.effectiveMode}\n- Peer Device: ${job.runtime.hardware.deviceLabel}\n- CPU: ${job.runtime.hardware.cpuModel} (${job.runtime.hardware.cpuCores} cores)\n- Memory: ${job.runtime.hardware.totalMemoryGb} GB\n\n## Source Evidence\n- Document photos: ${inputSummary?.documentCount ?? 0}\n- Voice note attached: ${inputSummary?.hasVoiceNote ? "Yes" : "No"}\n- Attachment files: ${(inputSummary?.attachmentNames ?? []).join(", ") || "None"}\n- OCR text items: ${job.ocrText.length}\n- Transcript excerpt: ${transcriptExcerpt}\n\n## Summary\n- Overview: ${summary?.overview ?? "Pending"}\n- Situation: ${summary?.presentingSituation ?? "Pending"}\n- Key Findings: ${(summary?.keyFindings ?? []).join("; ")}\n- Unresolved Risks: ${(summary?.unresolvedRisks ?? []).join("; ")}\n\n## Protocol-grounded Q&A\n${answers || "- None yet"}\n\n## Stage timings\n${stages}\n\n## Disclaimer\n${NON_DIAGNOSTIC_DISCLAIMER}\n`;
 }
 
 export async function runAnalysisJob(

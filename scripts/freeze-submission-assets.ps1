@@ -63,6 +63,25 @@ $selectedJobId = if (-not [string]::IsNullOrWhiteSpace($JobId)) {
 }
 
 $exportPath = Join-Path $evidenceDir "$selectedJobId.md"
+$selectedEventLines = @()
+if (Test-Path $eventsPath) {
+  $selectedEventLines = Get-Content $eventsPath | Where-Object {
+    if ([string]::IsNullOrWhiteSpace($_)) {
+      return $false
+    }
+
+    try {
+      $event = $_ | ConvertFrom-Json
+      return $event.jobId -eq $selectedJobId
+    } catch {
+      return $false
+    }
+  }
+}
+
+if ($selectedEventLines.Count -eq 0) {
+  throw "No evidence events found for approved job id $selectedJobId"
+}
 
 New-Item -ItemType Directory -Force -Path $assetDir | Out-Null
 New-Item -ItemType Directory -Force -Path $screenshotDir | Out-Null
@@ -73,13 +92,15 @@ $copiedFiles = @(
   @{ Source = $healthPath; Destination = Join-Path $assetDir 'live-health.json' },
   @{ Source = $liveValidationPath; Destination = Join-Path $assetDir 'live-validation.json' },
   @{ Source = $hardwarePath; Destination = Join-Path $assetDir 'hardware-summary.json' },
-  @{ Source = $eventsPath; Destination = Join-Path $assetDir 'events.jsonl' },
   @{ Source = $exportPath; Destination = Join-Path $assetDir 'approved-export.md' }
 )
 
 foreach ($entry in $copiedFiles) {
   Copy-Artifact -SourcePath $entry.Source -DestinationPath $entry.Destination
 }
+
+$filteredEventsDestination = Join-Path $assetDir 'events.jsonl'
+$selectedEventLines | Set-Content -Path $filteredEventsDestination
 
 $screenshotChecklist = @(
   'mobile-intake.png',
@@ -104,6 +125,8 @@ $checklistPath = Join-Path $assetDir 'SCREENSHOT_CHECKLIST.txt'
   ''
 ) + ($screenshotChecklist | ForEach-Object { "- $_" }) | Set-Content -Path (Join-Path $screenshotDir 'README.md')
 
+$copiedFileNames = @($copiedFiles | ForEach-Object { Split-Path $_.Destination -Leaf }) + 'events.jsonl'
+
 $manifest = [ordered]@{
   capturedAt = (Get-Date).ToString('o')
   qualificationStatus = $qualification.qualificationStatus
@@ -121,7 +144,14 @@ $manifest = [ordered]@{
     cpuName = $hardware.cpuName
     totalMemoryGb = $hardware.totalMemoryGb
   }
-  copiedFiles = @($copiedFiles | ForEach-Object { Split-Path $_.Destination -Leaf })
+  validation = [ordered]@{
+    documentCount = $liveValidation.documentCount
+    hasVoiceNote = $liveValidation.hasVoiceNote
+    attachmentNames = $liveValidation.attachmentNames
+    attachmentMode = $liveValidation.attachmentMode
+  }
+  copiedFiles = $copiedFileNames
+  filteredEvidenceEvents = $selectedEventLines.Count
   screenshotChecklist = $screenshotChecklist
   pendingManualAssets = @(
     'screenshots in submission/final-assets/screenshots',

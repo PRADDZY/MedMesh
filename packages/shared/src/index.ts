@@ -230,6 +230,11 @@ export interface AnalysisJob {
   status: "queued" | "running" | "completed" | "failed";
   createdAt: string;
   updatedAt: string;
+  inputSummary?: {
+    documentCount: number;
+    hasVoiceNote: boolean;
+    attachmentNames: string[];
+  };
   stages: AnalysisStage[];
   runtime: RuntimeStatus;
   ocrText: string[];

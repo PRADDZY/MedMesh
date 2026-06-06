@@ -8,6 +8,7 @@ MedMesh Handoff is a local-first mobile capture workflow for emergency and refer
 - Keeps AI workloads on the approved local peer with no cloud AI APIs.
 - Ships evidence logs, exports, validation artifacts, and a peer console for reproducibility.
 - Supports the main `emergency handoff` story with `rural referral` and `specialist consult` presets.
+- Makes the approved `lite` profile explicit: live QVAC OCR + live QVAC Whisper on this 4 GB Windows laptop, with deterministic local summary and grounded follow-up for reliability.
 
 ## Workspace
 
@@ -102,6 +103,8 @@ The service loads `.env` from the repo root and `services/peer-core/.env`, with 
 6. Watch `peer-ui` show OCR, transcription, summary, grounded answer, and export generation.
 7. Download the markdown export and capture the evidence log for submission.
 
+For automated proof runs, `pnpm validate:live` now generates a synthetic referral-note image and a synthetic voice-note WAV by default so the validation bundle exercises all three capture lanes. The final judge video should still use real phone-captured photo/audio.
+
 Artifacts default to:
 
 - `artifacts/evidence` - job markdown exports plus `events.jsonl`
@@ -119,6 +122,7 @@ Artifacts default to:
 - `pnpm qualify:live-host:dry`
 - `pnpm qualify:live-host`
 - `pnpm freeze:submission-assets`
+- `pnpm submission:check`
 - `powershell -ExecutionPolicy Bypass -File .\scripts\mock-smoke.ps1`
 - `powershell -ExecutionPolicy Bypass -File .\scripts\live-validate.ps1`
 - `powershell -ExecutionPolicy Bypass -File .\scripts\capture-hardware.ps1`
@@ -128,4 +132,5 @@ Artifacts default to:
 - Pairing is manual URL + code entry today; the peer console already emits a QR payload for a later pass.
 - `Build in Public` assets are intentionally out of scope for v1.
 - The current approved submission path is honest about its profile: live OCR and transcription on this laptop, deterministic summary assembly for reliability, and a strict non-diagnostic boundary.
+- `pnpm freeze:submission-assets` now curates `submission/final-assets/events.jsonl` to the selected approved live job instead of copying older mock runs into the submission bundle.
 - `full` mode is still available as an opt-in path for stronger hardware, but it is not required for the current approved submission bundle.

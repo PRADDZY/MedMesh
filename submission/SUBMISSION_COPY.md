@@ -32,7 +32,7 @@ If stronger hardware becomes available later, `MEDMESH_LIVE_PROFILE=full` can be
 
 ## Repo link
 
-`https://github.com/PRADDZY/MedMesh/tree/feat/medmesh-v1`
+`https://github.com/PRADDZY/MedMesh`
 
 ## Demo link
 

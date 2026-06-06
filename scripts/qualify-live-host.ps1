@@ -85,6 +85,7 @@ New-Item -ItemType Directory -Force -Path $hardwareDir | Out-Null
 $liveValidationSucceeded = $false
 $validationExitCode = $null
 $failureReason = $null
+$prewarmWarning = $null
 
 try {
   & powershell -ExecutionPolicy Bypass -File (Join-Path $repoRoot 'scripts\capture-hardware.ps1') | Out-Null
@@ -94,7 +95,11 @@ try {
     Invoke-PnpmScript -ScriptName 'prepare:live:dry'
   } else {
     $env:MEDMESH_QVAC_MODE = 'live'
-    Invoke-PnpmScript -ScriptName 'prepare:live'
+    try {
+      Invoke-PnpmScript -ScriptName 'prepare:live'
+    } catch {
+      $prewarmWarning = $_.Exception.Message
+    }
     & powershell -ExecutionPolicy Bypass -File (Join-Path $repoRoot 'scripts\live-validate.ps1')
     $validationExitCode = $LASTEXITCODE
     if ($validationExitCode -eq 0) {
@@ -233,6 +238,9 @@ $summary = [ordered]@{
       jobId = $liveValidation.jobId
       jobStatus = $liveValidation.jobStatus
       summary = $liveValidation.summary
+      documentCount = $liveValidation.documentCount
+      hasVoiceNote = $liveValidation.hasVoiceNote
+      attachmentMode = $liveValidation.attachmentMode
     }
   } else {
     [ordered]@{
@@ -242,8 +250,12 @@ $summary = [ordered]@{
       jobId = $null
       jobStatus = $null
       summary = $null
+      documentCount = $null
+      hasVoiceNote = $null
+      attachmentMode = $null
     }
   }
+  prewarmWarning = $prewarmWarning
   modelSources = $modelSources
   artifacts = [ordered]@{
     hardwareSummary = $hardwarePath

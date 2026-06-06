@@ -14,6 +14,7 @@
 
 - "MedMesh keeps the capture workflow private on the phone and moves the heavier local processing to this trusted nearby laptop."
 - "On this laptop, the approved live profile uses QVAC for OCR and transcription with no cloud AI APIs."
+- "This final run shows all three intake lanes: structured form, document photo, and voice note."
 - "The goal is safer handoff and continuity of care, not diagnosis."
 
 ## Judge proof points
@@ -21,5 +22,6 @@
 - Local-first capture still works before submission to peer.
 - QVAC runtime is visible in the peer console.
 - OCR and transcription models are loaded live on the approved laptop.
+- The selected job shows attached inputs and the export records source evidence.
 - Evidence log and markdown export are generated automatically.
 - Protocol grounding is shown through the first follow-up answer.

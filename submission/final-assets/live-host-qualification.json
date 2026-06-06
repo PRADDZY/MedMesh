@@ -1,5 +1,5 @@
 {
-    "capturedAt":  "2026-06-03T23:41:46.4680566+05:30",
+    "capturedAt":  "2026-06-07T00:36:57.7367279+05:30",
     "qualificationMode":  "live",
     "qualificationStatus":  "approved",
     "accepted":  true,
@@ -35,10 +35,14 @@
                        "succeeded":  true,
                        "requestedMode":  "live",
                        "effectiveMode":  "live",
-                       "jobId":  "22e313ba-44ae-4a7f-981b-f5446d31fbc2",
+                       "jobId":  "8f98dcc5-d787-439c-b811-e0f4f019046a",
                        "jobStatus":  "completed",
-                       "summary":  "Shortness of breath and confusion captured on-device for emergency handoff."
+                       "summary":  "Shortness of breath and confusion captured on-device for emergency handoff.",
+                       "documentCount":  1,
+                       "hasVoiceNote":  true,
+                       "attachmentMode":  "synthetic"
                    },
+    "prewarmWarning":  null,
     "modelSources":  [
                          {
                              "name":  "MedPsy Reasoner",
