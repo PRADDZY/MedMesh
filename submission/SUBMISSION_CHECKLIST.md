@@ -1,5 +1,9 @@
 # Submission Checklist
 
+For the final operator pass, use `submission/FINAL_SUBMISSION_RUNBOOK.md`.
+
+On Windows PowerShell, prefer `pnpm.cmd` instead of bare `pnpm`.
+
 ## Requirements alignment
 
 - `Open source` - repo includes a root `MIT` license and public README.

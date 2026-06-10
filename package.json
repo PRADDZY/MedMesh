@@ -10,6 +10,7 @@
     "dev:peer-core": "pnpm --filter @medmesh/peer-core dev",
     "dev:mobile": "pnpm --filter @medmesh/mobile start",
     "doctor:live": "pnpm --filter @medmesh/peer-core exec tsx scripts/live-doctor.ts",
+    "final:submission": "powershell -ExecutionPolicy Bypass -File .\\scripts\\final-submission-pass.ps1",
     "freeze:submission-assets": "powershell -ExecutionPolicy Bypass -File .\\scripts\\freeze-submission-assets.ps1",
     "lint": "pnpm -r --if-present lint",
     "prepare:live": "pnpm --filter @medmesh/peer-core exec tsx scripts/prewarm-live.ts",
