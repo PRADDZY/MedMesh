@@ -1,68 +1,111 @@
-# MedMesh Handoff
+<div align="center">
+  <img src="logo.png" alt="MedMesh logo" width="140" height="140">
+  <h1 align="center">MedMesh Handoff</h1>
+  <p align="center">
+    Local-first multimodal clinical handoff for Android capture and nearby peer compute.
+  </p>
+  <p align="center">
+    <a href="#about-the-project"><strong>About</strong></a>
+    ·
+    <a href="#built-with"><strong>Built With</strong></a>
+    ·
+    <a href="#getting-started"><strong>Getting Started</strong></a>
+    ·
+    <a href="#qvac-runtime"><strong>QVAC Runtime</strong></a>
+    ·
+    <a href="#usage"><strong>Usage</strong></a>
+  </p>
+</div>
 
-MedMesh Handoff is a local-first mobile capture workflow for emergency and referral handoff. An Android phone captures structured intake, document photos, and a voice note, then delegates OCR and speech transcription to a nearby trusted Windows laptop over QVAC while the peer assembles a grounded, non-diagnostic handoff packet.
+## About The Project
 
-## Why this fits QVAC
+[![MedMesh screen shot](screenshot.png)](screenshot.png)
 
-- Uses `@qvac/sdk` for real delegated OCR and transcription from phone to peer, provider startup, and local model orchestration.
-- Keeps AI workloads on the approved local peer with no cloud AI APIs.
-- Ships evidence logs, exports, validation artifacts, and a peer console for reproducibility.
-- Supports the main `emergency handoff` story with `rural referral` and `specialist consult` presets.
-- Makes the approved `lite` profile explicit: the phone delegates live QVAC OCR + live QVAC Whisper to this 4 GB Windows laptop, with deterministic local summary and grounded follow-up for reliability.
+MedMesh Handoff is a privacy-first workflow for field capture and clinical handoff. An Android device collects structured intake, document photos, and a voice note, then hands heavier AI work to a nearby trusted laptop instead of a cloud endpoint.
 
-## Workspace
+The system is designed for situations where connectivity is weak, privacy matters, and the receiving clinician still needs a clean, grounded handoff packet. The current product focuses on emergency handoff first, with rural referral and specialist consult presets built on the same shared pipeline.
 
-- `apps/mobile` - Expo Android-first intake app
-- `apps/peer-ui` - local web console for pairing, job status, and artifact review
-- `services/peer-core` - Node peer service with mock/live QVAC runtime, evidence logging, and export flow
-- `packages/shared` - shared contracts, presets, and disclaimers
-- `packages/protocol-pack` - bundled local protocol references used for grounding
-- `submission` - checklist, demo script, hardware proof, submission copy, and frozen assets
+### Why MedMesh
 
-## Quick start
+- Captures a case locally before sending it to the peer
+- Delegates OCR and transcription to nearby compute over QVAC
+- Produces a structured, non-diagnostic handoff summary
+- Grounds follow-up answers against bundled offline protocol references
+- Keeps the runtime transparent through pairing state, model status, and evidence logs
+
+## Built With
+
+- `@qvac/sdk`
+- `Expo`
+- `React Native`
+- `React`
+- `Vite`
+- `Express`
+- `TypeScript`
+- `pnpm` workspaces
+
+## Architecture
+
+### Workspace
+
+- `apps/mobile` - Android-first capture client for intake, photos, voice notes, and peer transfer
+- `apps/peer-ui` - local console for pairing, runtime status, jobs, and exports
+- `services/peer-core` - QVAC-backed peer service for provider startup, delegated preprocessing, storage, and exports
+- `packages/shared` - shared contracts, presets, runtime types, and disclaimers
+- `packages/protocol-pack` - bundled local protocol references used for grounded follow-up
+- `qvac/worker.entry.mjs` - custom worker entry used by the QVAC runtime
+
+### Data Flow
+
+1. The phone captures structured intake and attachments locally.
+2. The phone pairs with a nearby peer through a short code or QR payload.
+3. QVAC handles delegated OCR and speech transcription on the peer.
+4. `peer-core` normalizes inputs, assembles a handoff summary, and answers grounded follow-up questions.
+5. `peer-ui` exposes job state, runtime health, model status, and export artifacts.
+
+## Getting Started
+
+### Prerequisites
+
+- `Node.js 22+`
+- `pnpm 11+`
+- `Android` device or emulator for the mobile app
+- `Windows` host for the current live QVAC path
+
+If PowerShell blocks `pnpm`, use `pnpm.cmd`.
+
+### Installation
+
+1. Clone the repository.
+2. Install workspace dependencies.
+
+   ```powershell
+   pnpm install
+   ```
+
+3. Copy `services/peer-core/.env.example` to `services/peer-core/.env` if you want to override defaults.
+
+### Start the apps
 
 ```powershell
-pnpm install
 pnpm --filter @medmesh/peer-core dev
 pnpm --filter @medmesh/peer-ui dev
 pnpm --filter @medmesh/mobile start
 ```
 
-Default mode is `mock`, which keeps the product runnable without model downloads.
+## QVAC Runtime
 
-## Live QVAC mode
+MedMesh uses QVAC for local model orchestration and peer-to-peer delegation.
 
-The current approved single-machine path is the `lite` live profile:
+- The Android app acts as the capture client and delegated-work consumer.
+- The laptop starts the local QVAC provider used for OCR and transcription.
+- The peer exposes requested and effective runtime mode, provider identity, and model status through `peer-ui`.
+- The default live path on this machine is the `lite` profile.
+- A stronger machine can opt into the `full` profile with MedPsy and embeddings.
 
-- live `Whisper` transcription
-- live `OCR` extraction
-- deterministic local summary and grounded answer assembly for reliability on this 4 GB Windows laptop
+### Live profile
 
-Run:
-
-```powershell
-$env:MEDMESH_QVAC_MODE='live'
-pnpm doctor:live
-pnpm qualify:live-host:dry
-pnpm qualify:live-host
-```
-
-Current approved artifact on this laptop:
-
-- `artifacts/validation/live-host-qualification.json` -> `qualificationStatus=approved`
-- `runtime.liveProfile=lite`
-
-If you later have stronger hardware, you can opt into the fuller profile:
-
-```powershell
-$env:MEDMESH_QVAC_MODE='live'
-$env:MEDMESH_LIVE_PROFILE='full'
-pnpm qualify:live-host
-```
-
-## Model sources
-
-Default `lite` live sources:
+Current `lite` profile:
 
 - `WHISPER_TINY`
 - `VAD_SILERO_5_1_2`
@@ -71,67 +114,55 @@ Default `lite` live sources:
 Optional `full` profile additions:
 
 - `MedPsy 1.7B Q4_K_M`
-- custom embeddings if explicitly configured
+- protocol embeddings
 
-Override any source with a local path, registry URI, or remote URL:
+### Helpful environment variables
+
+- `MEDMESH_APP_URL` - base URL used by the phone
+- `MEDMESH_QVAC_MODE` - `mock` or `live`
+- `MEDMESH_LIVE_PROFILE` - `lite` or `full`
+- `MEDMESH_PROVIDER_TOPIC` - fixed provider topic when needed
+- `MEDMESH_CTX_SIZE` - context-size tuning for stronger hosts
+- `MEDMESH_GPU_LAYERS` - GPU offload tuning for stronger hosts
+- `MEDMESH_DEVICE_LABEL` - custom peer label shown in the console
+- `MEDMESH_GPU_LABEL` - custom GPU label shown in the console
+
+### Live runtime checks
 
 ```powershell
-$env:MEDMESH_LLM_MODEL_SRC='C:\models\qvac\custom-medpsy.gguf'
-$env:MEDMESH_WHISPER_MODEL_SRC='C:\models\qvac\custom-whisper.bin'
-$env:MEDMESH_VAD_MODEL_SRC='C:\models\qvac\custom-vad.bin'
-$env:MEDMESH_OCR_MODEL_SRC='C:\models\qvac\custom-ocr.onnx'
-$env:MEDMESH_EMBED_MODEL_SRC='C:\models\qvac\custom-embed.gguf'
+pnpm doctor:live
+pnpm prepare:live:dry
+pnpm qualify:live-host
 ```
 
-Useful env vars:
+## Usage
 
-- `MEDMESH_APP_URL` - LAN base URL for the phone
-- `MEDMESH_PROVIDER_TOPIC` - fixed QVAC topic for delegated/provider pairing
-- `MEDMESH_LIVE_PROFILE` - `lite` or `full`
-- `MEDMESH_CTX_SIZE` and `MEDMESH_GPU_LAYERS` - tuning knobs for stronger hardware
-- `MEDMESH_DEVICE_LABEL` and `MEDMESH_GPU_LABEL` - better hardware labeling in `peer-ui`
+1. Start `peer-core` and open `peer-ui`.
+2. Launch the mobile app and enter the peer URL or scan the pairing payload.
+3. Capture an emergency handoff case with structured intake, at least one document photo, and a voice note.
+4. Save the packet locally, then send it to the peer.
+5. Review delegated OCR, delegated transcription, summary output, grounded follow-up, and markdown export in `peer-ui`.
 
-The service loads `.env` from the repo root and `services/peer-core/.env`, with the service-local file taking precedence.
+## Validation
 
-## Demo flow
+```powershell
+pnpm typecheck
+pnpm build
+pnpm validate:mock
+pnpm validate:live
+```
 
-1. Run `pnpm qualify:live-host` and confirm `approved-live-demo-host`.
-2. Start `peer-core` and open `peer-ui`.
-3. On the phone, enter the peer URL and pairing code shown on the console.
-4. Fill the emergency handoff fields, attach one or more document photos, and record a voice note.
-5. Save locally once, then submit to peer; the phone delegates OCR and transcription to the paired provider before upload completes.
-6. Watch `peer-ui` show the delegated processing path, summary, grounded answer, and export generation.
-7. Download the markdown export and capture the evidence log for submission.
+Additional runtime diagnostics:
 
-For automated proof runs, `pnpm validate:live` now generates a synthetic referral-note image and a synthetic voice-note WAV by default so the validation bundle exercises all three capture lanes. The final judge video should still use real phone-captured photo/audio.
+```powershell
+pnpm capture:hardware
+pnpm qualify:live-host:dry
+```
 
-Artifacts default to:
+## Project Scope
 
-- `artifacts/evidence` - job markdown exports plus `events.jsonl`
-- `artifacts/validation` - doctor, prewarm, health, validation, and qualification reports
-- `data/peer-core` - persisted jobs and uploaded files
-- `submission/final-assets` - frozen submission bundle copied from the latest approved run, plus screenshot placeholders and `freeze-manifest.json`
-
-## Validation used here
-
-- `pnpm typecheck`
-- `pnpm build`
-- `pnpm doctor:live`
-- `pnpm prepare:live:dry`
-- `pnpm prepare:live`
-- `pnpm qualify:live-host:dry`
-- `pnpm qualify:live-host`
-- `pnpm freeze:submission-assets`
-- `pnpm submission:check`
-- `powershell -ExecutionPolicy Bypass -File .\scripts\mock-smoke.ps1`
-- `powershell -ExecutionPolicy Bypass -File .\scripts\live-validate.ps1`
-- `powershell -ExecutionPolicy Bypass -File .\scripts\capture-hardware.ps1`
-
-## Notes
-
-- Pairing is manual URL + code entry today; the peer console already emits a QR payload for a later pass.
-- `apps/mobile` now expects the Expo plugin path `@qvac/sdk/expo-plugin` during prebuild so the QVAC mobile worker bundle is generated correctly.
-- `Build in Public` assets are intentionally out of scope for v1.
-- The current approved submission path is honest about its profile: live OCR and transcription on this laptop, deterministic summary assembly for reliability, and a strict non-diagnostic boundary.
-- `pnpm freeze:submission-assets` now curates `submission/final-assets/events.jsonl` to the selected approved live job instead of copying older mock runs into the submission bundle.
-- `full` mode is still available as an opt-in path for stronger hardware, but it is not required for the current approved submission bundle.
+- Non-diagnostic workflow support only
+- Emergency handoff as the primary path
+- Rural referral and specialist consult as alternate presets
+- Local-first storage on the phone and peer
+- No required cloud AI dependency

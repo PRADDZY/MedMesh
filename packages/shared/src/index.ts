@@ -348,7 +348,7 @@ export const REMOTE_API_MANIFEST = {
   aiServices: [] as string[],
   utilityServices: [] as string[],
   notes:
-    "MedMesh keeps AI workloads on-device or on trusted peer hardware. Optional utilities should be disclosed before submission.",
+    "MedMesh keeps AI workloads on-device or on trusted peer hardware. Optional utilities should be disclosed in deployment docs.",
 };
 
 export const SCENARIO_PRESETS: ScenarioPreset[] = [
